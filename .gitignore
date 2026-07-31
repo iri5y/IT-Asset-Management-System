@@ -5,19 +5,35 @@ dist/
 
 # Backend
 venv/
+.venv/
+env/
 __pycache__/
 *.pyc
 
 # Environment
 .env
 .env.*
+!.env.example
 
 # Database
 *.db
 *.sqlite3
+backups/
+*.sql
 
 # Logs
 *.log
+
+# Build artifacts
+*.exe
+*.dll
+
+# Test cache
+.pytest_cache/
+.coverage
+
+# Uploads
+uploads/
 
 # OS files
 .DS_Store
@@ -26,3 +42,7 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Temporary files
+*.tmp
+*.bak
