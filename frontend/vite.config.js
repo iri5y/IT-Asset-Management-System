@@ -1,0 +1,22 @@
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    css: true,
+    passWithNoTests: true
+  },
+  server: {
+    host: '0.0.0.0',
+    port: 5173
+  },
+  // 支持SPA路由的history模式
+  preview: {
+    host: '0.0.0.0',
+    port: 5173
+  }
+})
