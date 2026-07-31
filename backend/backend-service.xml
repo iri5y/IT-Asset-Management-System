@@ -1,0 +1,11 @@
+<service>
+   <id>AssetManagementBackend</id>
+   <name>Asset Management Python Backend</name>
+   <description>Python FastAPI Backend Service for IT Fixed Asset Inventory System.</description>
+
+   <executable>%BASE%\start_backend.bat</executable>
+
+   <workingdirectory>%BASE%</workingdirectory>
+
+   <log mode="roll"/>
+</service>
