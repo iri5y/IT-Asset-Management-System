@@ -1,0 +1,296 @@
+2026-06-11T10:07:07.896 INFO  console - Installing service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T10:07:07.953 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' was installed successfully.
+2026-06-11T10:07:19.046 INFO  console - Starting service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T10:07:19.357 DEBUG console - Starting WinSW in service mode.
+2026-06-11T10:07:19.395 FATAL console - Unhandled exception
+System.IO.DirectoryNotFoundException: Could not find a part of the path 'D:\IT Fixed Asset Inventory-Depolyed\backend'.
+   at System.Environment.set_CurrentDirectoryCore(String)
+   at System.Environment.set_CurrentDirectory(String)
+   at WinSW.WrapperService..ctor(XmlServiceConfig)
+   at WinSW.Program.<Main>g__Run|7_1(String)
+   at System.CommandLine.Handler.<>c__DisplayClass2_0`1.<SetHandler>b__0(InvocationContext)
+   at System.CommandLine.Invocation.AnonymousCommandHandler.Invoke(InvocationContext)
+   at System.CommandLine.Invocation.InvocationPipeline.<>c__DisplayClass4_0.<<BuildInvocationChain>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at System.CommandLine.Builder.CommandLineBuilderExtensions.<>c__DisplayClass17_0.<<UseParseErrorReporting>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at System.CommandLine.Builder.CommandLineBuilderExtensions.<>c__DisplayClass12_0.<<UseHelp>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at System.CommandLine.Builder.CommandLineBuilderExtensions.<>c__DisplayClass22_0.<<UseVersionOption>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at System.CommandLine.Builder.CommandLineBuilderExtensions.<>c__DisplayClass19_0.<<UseTypoCorrections>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at System.CommandLine.Builder.CommandLineBuilderExtensions.<>c.<<RegisterWithDotnetSuggest>b__5_0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at System.CommandLine.Builder.CommandLineBuilderExtensions.<>c__DisplayClass8_0.<<UseExceptionHandler>b__0>d.MoveNext()
+2026-06-11T10:07:19.445 FATAL console - Cannot start service 'AssetManagementBackend' on computer '.'.
+2026-06-11T10:13:53.207 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' was refreshed successfully.
+2026-06-11T10:13:53.228 INFO  console - Starting service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T10:13:53.529 DEBUG console - Starting WinSW in service mode.
+2026-06-11T10:13:53.568 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' was refreshed successfully.
+2026-06-11T10:13:53.586 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-11T10:13:53.618 INFO  service - Started process cmd (7984).
+2026-06-11T10:13:53.644 INFO  service - Service started successfully.
+2026-06-11T10:13:53.832 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' started successfully.
+2026-06-11T10:34:42.271 INFO  console - Uninstalling service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T10:34:42.301 WARN  console - Service 'Asset Management Python Backend (AssetManagementBackend)' is started. It may be impossible to uninstall it.
+2026-06-11T10:34:42.303 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' was uninstalled successfully.
+2026-06-11T10:39:43.956 INFO  console - Uninstalling service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T10:39:43.987 WARN  console - Service 'Asset Management Python Backend (AssetManagementBackend)' is started. It may be impossible to uninstall it.
+2026-06-11T10:39:43.991 ERROR console - Failed to delete service. 指定的服务已标记为删除。
+2026-06-11T10:40:06.891 INFO  console - Installing service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T10:40:06.921 ERROR console - A service with ID 'AssetManagementBackend' already exists.
+2026-06-11T10:40:06.925 FATAL console - Failed to install the service. 指定的服务已存在。
+2026-06-11T10:40:20.089 INFO  console - Starting service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T10:40:20.120 FATAL console - Cannot start service 'AssetManagementBackend' on computer '.'.
+2026-06-11T10:41:06.759 INFO  service - Stopping AssetManagementBackend
+2026-06-11T10:41:06.762 DEBUG service - ProcessKill 7984
+2026-06-11T10:41:21.766 INFO  service - Child process 'cmd (7984)' terminated.
+2026-06-11T10:41:21.782 INFO  service - Finished AssetManagementBackend
+2026-06-11T10:41:21.783 INFO  service - Service stopped successfully.
+2026-06-11T10:44:45.831 INFO  console - Uninstalling service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T10:44:45.862 WARN  console - Service 'Asset Management Python Backend (AssetManagementBackend)' does not exist.
+2026-06-11T10:45:00.742 INFO  console - Installing service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T10:45:00.788 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' was installed successfully.
+2026-06-11T10:45:10.521 INFO  console - Starting service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T10:45:10.842 DEBUG console - Starting WinSW in service mode.
+2026-06-11T10:45:10.888 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-11T10:45:10.922 INFO  service - Started process cmd (14712).
+2026-06-11T10:45:10.965 INFO  service - Service started successfully.
+2026-06-11T10:45:11.144 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' started successfully.
+2026-06-11T12:48:30.302 INFO  console - Uninstalling service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T12:48:30.330 WARN  console - Service 'Asset Management Python Backend (AssetManagementBackend)' is started. It may be impossible to uninstall it.
+2026-06-11T12:48:30.332 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' was uninstalled successfully.
+2026-06-11T12:48:43.373 INFO  console - Installing service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T12:48:43.401 ERROR console - A service with ID 'AssetManagementBackend' already exists.
+2026-06-11T12:48:43.406 FATAL console - Failed to install the service. 指定的服务已存在。
+2026-06-11T12:48:59.274 FATAL console - Failed to change service config. 指定的服务已标记为删除。
+2026-06-11T12:49:15.959 INFO  console - Installing service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T12:49:15.988 ERROR console - A service with ID 'AssetManagementBackend' already exists.
+2026-06-11T12:49:15.992 FATAL console - Failed to install the service. 指定的服务已存在。
+2026-06-11T12:52:57.993 INFO  console - Uninstalling service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T12:52:58.023 WARN  console - Service 'Asset Management Python Backend (AssetManagementBackend)' is started. It may be impossible to uninstall it.
+2026-06-11T12:52:58.025 ERROR console - Failed to delete service. 指定的服务已标记为删除。
+2026-06-11T12:53:06.956 INFO  console - Installing service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T12:53:06.986 ERROR console - A service with ID 'AssetManagementBackend' already exists.
+2026-06-11T12:53:06.991 FATAL console - Failed to install the service. 指定的服务已存在。
+2026-06-11T12:53:28.032 INFO  service - Stopping AssetManagementBackend
+2026-06-11T12:53:28.034 DEBUG service - ProcessKill 14712
+2026-06-11T12:53:43.036 INFO  service - Child process 'cmd (14712)' terminated.
+2026-06-11T12:53:43.052 INFO  service - Finished AssetManagementBackend
+2026-06-11T12:53:43.052 INFO  service - Service stopped successfully.
+2026-06-11T12:54:10.109 INFO  console - Uninstalling service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T12:54:10.140 WARN  console - Service 'Asset Management Python Backend (AssetManagementBackend)' does not exist.
+2026-06-11T12:54:25.666 INFO  console - Installing service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T12:54:25.704 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' was installed successfully.
+2026-06-11T12:54:35.435 INFO  console - Starting service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T12:54:35.752 DEBUG console - Starting WinSW in service mode.
+2026-06-11T12:54:35.797 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-11T12:54:35.829 INFO  service - Started process cmd (10532).
+2026-06-11T12:54:35.856 INFO  service - Service started successfully.
+2026-06-11T12:54:36.046 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' started successfully.
+2026-06-11T12:56:41.195 INFO  console - Stopping service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T12:56:41.217 INFO  service - Stopping AssetManagementBackend
+2026-06-11T12:56:41.219 DEBUG service - ProcessKill 10532
+2026-06-11T12:56:56.236 INFO  service - Child process 'cmd (10532)' terminated.
+2026-06-11T12:56:56.249 INFO  service - Finished AssetManagementBackend
+2026-06-11T12:56:56.251 INFO  service - Service stopped successfully.
+2026-06-11T12:56:56.395 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' stopped successfully.
+2026-06-11T13:14:30.116 INFO  console - Starting service 'Asset Management Python Backend (AssetManagementBackend)'...
+2026-06-11T13:14:30.428 DEBUG console - Starting WinSW in service mode.
+2026-06-11T13:14:30.472 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-11T13:14:30.504 INFO  service - Started process cmd (9812).
+2026-06-11T13:14:30.531 INFO  service - Service started successfully.
+2026-06-11T13:14:30.730 INFO  console - Service 'Asset Management Python Backend (AssetManagementBackend)' started successfully.
+2026-06-22T16:25:43.914 INFO  service - Stopping AssetManagementBackend
+2026-06-22T16:25:43.917 DEBUG service - ProcessKill 9812
+2026-06-22T16:25:58.933 INFO  service - Child process 'cmd (9812)' terminated.
+2026-06-22T16:25:58.952 INFO  service - Finished AssetManagementBackend
+2026-06-22T16:25:58.953 INFO  service - Service stopped successfully.
+2026-06-22T16:25:59.440 DEBUG console - Starting WinSW in service mode.
+2026-06-22T16:25:59.482 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-22T16:25:59.515 INFO  service - Started process cmd (9008).
+2026-06-22T16:25:59.540 INFO  service - Service started successfully.
+2026-06-22T17:14:29.035 INFO  service - Stopping AssetManagementBackend
+2026-06-22T17:14:29.038 DEBUG service - ProcessKill 9008
+2026-06-22T17:14:44.053 INFO  service - Child process 'cmd (9008)' terminated.
+2026-06-22T17:14:44.068 INFO  service - Finished AssetManagementBackend
+2026-06-22T17:14:44.069 INFO  service - Service stopped successfully.
+2026-06-22T17:14:44.599 DEBUG console - Starting WinSW in service mode.
+2026-06-22T17:14:44.642 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-22T17:14:44.675 INFO  service - Started process cmd (9352).
+2026-06-22T17:14:44.704 INFO  service - Service started successfully.
+2026-06-23T12:41:53.904 INFO  service - Stopping AssetManagementBackend
+2026-06-23T12:41:53.907 DEBUG service - ProcessKill 9352
+2026-06-23T12:42:08.915 INFO  service - Child process 'cmd (9352)' terminated.
+2026-06-23T12:42:08.929 INFO  service - Finished AssetManagementBackend
+2026-06-23T12:42:08.930 INFO  service - Service stopped successfully.
+2026-06-23T12:42:09.498 DEBUG console - Starting WinSW in service mode.
+2026-06-23T12:42:09.540 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-23T12:42:09.572 INFO  service - Started process cmd (7248).
+2026-06-23T12:42:09.601 INFO  service - Service started successfully.
+2026-06-23T12:49:28.781 INFO  service - Stopping AssetManagementBackend
+2026-06-23T12:49:28.784 DEBUG service - ProcessKill 7248
+2026-06-23T12:49:43.791 INFO  service - Child process 'cmd (7248)' terminated.
+2026-06-23T12:49:43.804 INFO  service - Finished AssetManagementBackend
+2026-06-23T12:49:43.804 INFO  service - Service stopped successfully.
+2026-06-23T12:49:44.246 DEBUG console - Starting WinSW in service mode.
+2026-06-23T12:49:44.288 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-23T12:49:44.321 INFO  service - Started process cmd (10900).
+2026-06-23T12:49:44.348 INFO  service - Service started successfully.
+2026-06-23T13:35:16.476 INFO  service - Stopping AssetManagementBackend
+2026-06-23T13:35:16.479 DEBUG service - ProcessKill 10900
+2026-06-23T13:35:31.490 INFO  service - Child process 'cmd (10900)' terminated.
+2026-06-23T13:35:31.521 INFO  service - Finished AssetManagementBackend
+2026-06-23T13:35:31.522 INFO  service - Service stopped successfully.
+2026-06-23T13:35:31.952 DEBUG console - Starting WinSW in service mode.
+2026-06-23T13:35:31.995 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-23T13:35:32.027 INFO  service - Started process cmd (14596).
+2026-06-23T13:35:32.058 INFO  service - Service started successfully.
+2026-06-23T13:45:31.772 INFO  service - Stopping AssetManagementBackend
+2026-06-23T13:45:31.775 DEBUG service - ProcessKill 14596
+2026-06-23T13:45:46.788 INFO  service - Child process 'cmd (14596)' terminated.
+2026-06-23T13:45:46.803 INFO  service - Finished AssetManagementBackend
+2026-06-23T13:45:46.804 INFO  service - Service stopped successfully.
+2026-06-23T13:45:47.288 DEBUG console - Starting WinSW in service mode.
+2026-06-23T13:45:47.331 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-23T13:45:47.363 INFO  service - Started process cmd (7360).
+2026-06-23T13:45:47.389 INFO  service - Service started successfully.
+2026-06-23T13:50:20.649 INFO  service - Stopping AssetManagementBackend
+2026-06-23T13:50:20.652 DEBUG service - ProcessKill 7360
+2026-06-23T13:50:35.659 INFO  service - Child process 'cmd (7360)' terminated.
+2026-06-23T13:50:35.686 INFO  service - Finished AssetManagementBackend
+2026-06-23T13:50:35.687 INFO  service - Service stopped successfully.
+2026-06-23T13:50:36.117 DEBUG console - Starting WinSW in service mode.
+2026-06-23T13:50:36.160 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-23T13:50:36.192 INFO  service - Started process cmd (2840).
+2026-06-23T13:50:36.220 INFO  service - Service started successfully.
+2026-06-23T13:58:38.917 INFO  service - Stopping AssetManagementBackend
+2026-06-23T13:58:38.922 DEBUG service - ProcessKill 2840
+2026-06-23T13:58:53.937 INFO  service - Child process 'cmd (2840)' terminated.
+2026-06-23T13:58:53.949 INFO  service - Finished AssetManagementBackend
+2026-06-23T13:58:53.950 INFO  service - Service stopped successfully.
+2026-06-23T13:58:54.409 DEBUG console - Starting WinSW in service mode.
+2026-06-23T13:58:54.451 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-23T13:58:54.484 INFO  service - Started process cmd (18892).
+2026-06-23T13:58:54.511 INFO  service - Service started successfully.
+2026-06-23T14:02:25.636 INFO  service - Stopping AssetManagementBackend
+2026-06-23T14:02:25.639 DEBUG service - ProcessKill 18892
+2026-06-23T14:02:40.646 INFO  service - Child process 'cmd (18892)' terminated.
+2026-06-23T14:02:40.663 INFO  service - Finished AssetManagementBackend
+2026-06-23T14:02:40.664 INFO  service - Service stopped successfully.
+2026-06-23T14:02:41.193 DEBUG console - Starting WinSW in service mode.
+2026-06-23T14:02:41.234 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-23T14:02:41.267 INFO  service - Started process cmd (16600).
+2026-06-23T14:02:41.293 INFO  service - Service started successfully.
+2026-06-23T14:52:46.012 INFO  service - Stopping AssetManagementBackend
+2026-06-23T14:52:46.015 DEBUG service - ProcessKill 16600
+2026-06-23T14:53:01.025 INFO  service - Child process 'cmd (16600)' terminated.
+2026-06-23T14:53:01.042 INFO  service - Finished AssetManagementBackend
+2026-06-23T14:53:01.043 INFO  service - Service stopped successfully.
+2026-06-23T14:53:01.508 DEBUG console - Starting WinSW in service mode.
+2026-06-23T14:53:01.551 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-23T14:53:01.583 INFO  service - Started process cmd (17520).
+2026-06-23T14:53:01.608 INFO  service - Service started successfully.
+2026-06-24T03:01:17.292 INFO  service - Stopping AssetManagementBackend
+2026-06-24T03:01:17.328 DEBUG service - ProcessKill 17520
+2026-06-24T03:02:02.910 DEBUG console - Starting WinSW in service mode.
+2026-06-24T03:02:03.025 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-24T03:02:03.099 INFO  service - Started process cmd (8460).
+2026-06-24T03:02:03.200 INFO  service - Service started successfully.
+2026-06-24T03:02:33.965 INFO  service - Stopping AssetManagementBackend
+2026-06-24T03:02:33.977 DEBUG service - ProcessKill 8460
+2026-06-24T03:03:08.346 DEBUG console - Starting WinSW in service mode.
+2026-06-24T03:03:08.466 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-24T03:03:08.562 INFO  service - Started process cmd (6968).
+2026-06-24T03:03:08.685 INFO  service - Service started successfully.
+2026-06-24T03:03:19.218 INFO  service - Stopping AssetManagementBackend
+2026-06-24T03:03:19.229 DEBUG service - ProcessKill 6968
+2026-06-24T03:03:53.126 DEBUG console - Starting WinSW in service mode.
+2026-06-24T03:03:53.258 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-24T03:03:53.324 INFO  service - Started process cmd (1056).
+2026-06-24T03:03:53.434 INFO  service - Service started successfully.
+2026-06-26T15:27:02.362 INFO  service - Stopping AssetManagementBackend
+2026-06-26T15:27:02.364 DEBUG service - ProcessKill 1056
+2026-06-26T15:27:17.377 INFO  service - Child process 'cmd (1056)' terminated.
+2026-06-26T15:27:17.393 INFO  service - Finished AssetManagementBackend
+2026-06-26T15:27:17.395 INFO  service - Service stopped successfully.
+2026-06-26T15:27:17.866 DEBUG console - Starting WinSW in service mode.
+2026-06-26T15:27:17.907 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-26T15:27:17.940 INFO  service - Started process cmd (16616).
+2026-06-26T15:27:17.965 INFO  service - Service started successfully.
+2026-06-26T16:52:41.355 INFO  service - Stopping AssetManagementBackend
+2026-06-26T16:52:41.358 DEBUG service - ProcessKill 16616
+2026-06-26T16:52:56.370 INFO  service - Child process 'cmd (16616)' terminated.
+2026-06-26T16:52:56.382 INFO  service - Finished AssetManagementBackend
+2026-06-26T16:52:56.389 INFO  service - Service stopped successfully.
+2026-06-26T16:52:56.836 DEBUG console - Starting WinSW in service mode.
+2026-06-26T16:52:56.878 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-26T16:52:56.911 INFO  service - Started process cmd (18032).
+2026-06-26T16:52:56.939 INFO  service - Service started successfully.
+2026-06-26T16:54:40.886 INFO  service - Stopping AssetManagementBackend
+2026-06-26T16:54:40.889 DEBUG service - ProcessKill 18032
+2026-06-26T16:54:55.891 INFO  service - Child process 'cmd (18032)' terminated.
+2026-06-26T16:54:55.918 INFO  service - Finished AssetManagementBackend
+2026-06-26T16:54:55.920 INFO  service - Service stopped successfully.
+2026-06-26T16:54:56.388 DEBUG console - Starting WinSW in service mode.
+2026-06-26T16:54:56.432 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-26T16:54:56.467 INFO  service - Started process cmd (17188).
+2026-06-26T16:54:56.495 INFO  service - Service started successfully.
+2026-06-26T16:55:23.345 INFO  service - Stopping AssetManagementBackend
+2026-06-26T16:55:23.347 DEBUG service - ProcessKill 17188
+2026-06-26T16:55:38.367 INFO  service - Child process 'cmd (17188)' terminated.
+2026-06-26T16:55:38.380 INFO  service - Finished AssetManagementBackend
+2026-06-26T16:55:38.380 INFO  service - Service stopped successfully.
+2026-06-26T16:55:38.813 DEBUG console - Starting WinSW in service mode.
+2026-06-26T16:55:38.856 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-26T16:55:38.888 INFO  service - Started process cmd (7852).
+2026-06-26T16:55:38.914 INFO  service - Service started successfully.
+2026-06-29T11:02:31.304 INFO  service - Stopping AssetManagementBackend
+2026-06-29T11:02:31.306 DEBUG service - ProcessKill 7852
+2026-06-29T11:02:46.314 INFO  service - Child process 'cmd (7852)' terminated.
+2026-06-29T11:02:46.327 INFO  service - Finished AssetManagementBackend
+2026-06-29T11:02:46.328 INFO  service - Service stopped successfully.
+2026-06-29T11:02:46.779 DEBUG console - Starting WinSW in service mode.
+2026-06-29T11:02:46.825 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-29T11:02:46.857 INFO  service - Started process cmd (15416).
+2026-06-29T11:02:46.882 INFO  service - Service started successfully.
+2026-06-29T15:19:52.725 INFO  service - Stopping AssetManagementBackend
+2026-06-29T15:19:52.730 DEBUG service - ProcessKill 15416
+2026-06-29T15:20:28.294 DEBUG console - Starting WinSW in service mode.
+2026-06-29T15:20:28.447 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-29T15:20:28.529 INFO  service - Started process cmd (2888).
+2026-06-29T15:20:28.595 INFO  service - Service started successfully.
+2026-06-29T15:32:53.552 INFO  service - Stopping AssetManagementBackend
+2026-06-29T15:32:53.556 DEBUG service - ProcessKill 2888
+2026-06-29T15:33:08.571 INFO  service - Child process 'cmd (2888)' terminated.
+2026-06-29T15:33:08.586 INFO  service - Finished AssetManagementBackend
+2026-06-29T15:33:08.587 INFO  service - Service stopped successfully.
+2026-06-29T15:33:09.087 DEBUG console - Starting WinSW in service mode.
+2026-06-29T15:33:09.129 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-06-29T15:33:09.161 INFO  service - Started process cmd (5692).
+2026-06-29T15:33:09.188 INFO  service - Service started successfully.
+2026-07-15T17:30:48.041 INFO  service - Stopping AssetManagementBackend
+2026-07-15T17:30:48.055 DEBUG service - ProcessKill 5692
+2026-07-15T17:31:27.271 DEBUG console - Starting WinSW in service mode.
+2026-07-15T17:31:27.420 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-07-15T17:31:27.493 INFO  service - Started process cmd (5700).
+2026-07-15T17:31:27.561 INFO  service - Service started successfully.
+2026-07-15T17:31:48.714 INFO  service - Stopping AssetManagementBackend
+2026-07-15T17:31:48.722 DEBUG service - ProcessKill 5700
+2026-07-15T17:32:23.346 DEBUG console - Starting WinSW in service mode.
+2026-07-15T17:32:23.507 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-07-15T17:32:23.598 INFO  service - Started process cmd (1476).
+2026-07-15T17:32:23.669 INFO  service - Service started successfully.
+2026-07-19T03:45:25.671 INFO  service - Stopping AssetManagementBackend
+2026-07-19T03:45:25.675 DEBUG service - ProcessKill 1476
+2026-07-19T03:46:03.019 DEBUG console - Starting WinSW in service mode.
+2026-07-19T03:46:03.121 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-07-19T03:46:03.203 INFO  service - Started process cmd (5316).
+2026-07-19T03:46:03.253 INFO  service - Service started successfully.
+2026-07-19T03:46:24.174 INFO  service - Stopping AssetManagementBackend
+2026-07-19T03:46:24.186 DEBUG service - ProcessKill 5316
+2026-07-19T03:46:58.205 DEBUG console - Starting WinSW in service mode.
+2026-07-19T03:46:58.363 INFO  service - Starting D:\IT Fixed Asset Inventory-Deployed\backend\start_backend.bat
+2026-07-19T03:46:58.488 INFO  service - Started process cmd (1700).
+2026-07-19T03:46:58.559 INFO  service - Service started successfully.
