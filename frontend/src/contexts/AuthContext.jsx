@@ -5,6 +5,8 @@ const API_URL = import.meta.env.VITE_API_URL || ''
 
 // 无操作超时时间：30 分钟（毫秒）
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000
+// 认证初始化不能无限等待后端，否则首屏会永久停留在加载状态
+const AUTH_REQUEST_TIMEOUT_MS = 10 * 1000
 
 const AuthContext = createContext(null)
 
@@ -69,9 +71,11 @@ export function AuthProvider({ children }) {
           const refreshToken = localStorage.getItem('refresh_token')
           if (refreshToken) {
             try {
-              const res = await axios.post(`${API_URL}/auth/refresh`, {
-                refresh_token: refreshToken,
-              })
+              const res = await axios.post(
+                `${API_URL}/auth/refresh`,
+                { refresh_token: refreshToken },
+                { timeout: AUTH_REQUEST_TIMEOUT_MS },
+              )
               const { access_token, user: userData, password_expired, password_remind, must_change_password } = res.data
               localStorage.setItem('access_token', access_token)
               setUser(userData)
@@ -94,6 +98,7 @@ export function AuthProvider({ children }) {
         try {
           const res = await axios.get(`${API_URL}/auth/me`, {
             headers: { Authorization: `Bearer ${token}` },
+            timeout: AUTH_REQUEST_TIMEOUT_MS,
           })
           // 后端校验通过，恢复用户状态
           setUser(res.data)

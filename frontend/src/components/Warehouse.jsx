@@ -1,233 +1,476 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { useAuth } from '../contexts/AuthContext'
+import {useAuth} from '../contexts/AuthContext'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
-const EMPTY_MATERIAL = {
-  name: '', primary_category_id: '', secondary_category_id: '',
-  available_quantity: 0, allocated_quantity: 0, low_stock_threshold: 0,
-  location: '', issue_policy: 'CONSUMABLE', brand: '', model: '', notes: '',
-}
 
 function Warehouse({ selectedAsset, onAssetSelect }) {
-  const { isReadOnly } = useAuth()
+  const {isReadonly} = useAuth()
   const [assets, setAssets] = useState([])
-  const [primaryCategories, setPrimaryCategories] = useState([])
-  const [secondaryCategories, setSecondaryCategories] = useState([])
-  const [filters, setFilters] = useState({ name: '', primary_category_id: '', secondary_category_id: '', low_stock: false })
+  const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingAsset, setEditingAsset] = useState(null)
+  const [filters, setFilters] = useState({
+    search: '',
+    category: '',
+    low_stock: false
+  })
 
-  const loadPrimaryCategories = async () => {
-    const response = await axios.get(`${API_URL}/warehouse/categories/primary`)
-    setPrimaryCategories(response.data)
-    return response.data
-  }
+  useEffect(() => {
+    fetchAssets()
+    fetchStats()
+  }, [filters])
 
-  const loadSecondaryCategories = async (primaryId) => {
-    if (!primaryId) {
-      setSecondaryCategories([])
-      return []
-    }
-    const response = await axios.get(`${API_URL}/warehouse/categories/primary/${primaryId}/secondary`)
-    setSecondaryCategories(response.data)
-    return response.data
-  }
-
-  const loadMaterials = async () => {
+  const fetchAssets = async () => {
     try {
       setLoading(true)
-      setError('')
       const params = {}
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== '' && value !== false && value !== null) params[key] = value
+      Object.keys(filters).forEach(key => {
+        if (filters[key]) params[key] = filters[key]
       })
-      const response = await axios.get(`${API_URL}/warehouse/materials`, { params })
+      const response = await axios.get(`${API_URL}/warehouse/`, { params })
       setAssets(response.data)
-    } catch (requestError) {
-      setError(requestError.response?.data?.detail || '获取仓储物料失败')
+    } catch (error) {
+      console.error('获取库房资产失败:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { loadPrimaryCategories().catch(error => setError(error.response?.data?.detail || '获取一级分类失败')) }, [])
-  useEffect(() => { loadMaterials() }, [filters])
-
-  const changeFilter = async (event) => {
-    const { name, value, checked, type } = event.target
-    if (name === 'primary_category_id') {
-      setFilters(current => ({ ...current, primary_category_id: value, secondary_category_id: '' }))
-      try { await loadSecondaryCategories(value) } catch (requestError) { setError(requestError.response?.data?.detail || '获取二级分类失败') }
-      return
+  const fetchStats = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/warehouse/stats`)
+      setStats(response.data)
+    } catch (error) {
+      console.error('获取统计数据失败:', error)
     }
-    setFilters(current => ({ ...current, [name]: type === 'checkbox' ? checked : value }))
   }
 
-  const openAdd = () => {
+  const handleAddAsset = () => {
     setEditingAsset(null)
     setShowModal(true)
   }
 
-  const openEdit = (asset) => {
+  const handleEditAsset = (asset) => {
     setEditingAsset(asset)
     setShowModal(true)
   }
 
-  const saveMaterial = async (material) => {
-    const payload = {
-      ...material,
-      primary_category_id: Number(material.primary_category_id),
-      secondary_category_id: Number(material.secondary_category_id),
-      available_quantity: Number(material.available_quantity),
-      allocated_quantity: Number(material.allocated_quantity),
-      low_stock_threshold: Number(material.low_stock_threshold),
-    }
+  const handleDeleteAsset = async (id) => {
+    if (!window.confirm('确定要删除这个库房资产吗？')) return
+    
     try {
-      if (editingAsset) await axios.put(`${API_URL}/warehouse/materials/${editingAsset.id}`, payload)
-      else await axios.post(`${API_URL}/warehouse/materials`, payload)
-      setShowModal(false)
-      await loadMaterials()
-    } catch (requestError) {
-      throw new Error(requestError.response?.data?.detail || '保存仓储物料失败')
+      await axios.delete(`${API_URL}/warehouse/${id}`)
+      fetchAssets()
+      fetchStats()
+    } catch (error) {
+      console.error('删除库房资产失败:', error)
+      alert('删除库房资产失败')
     }
+  }
+
+  const handleSaveAsset = async (assetData) => {
+    try {
+      if (editingAsset) {
+        await axios.put(`${API_URL}/warehouse/${editingAsset.id}`, assetData)
+      } else {
+        await axios.post(`${API_URL}/warehouse/`, assetData)
+      }
+      setShowModal(false)
+      fetchAssets()
+      fetchStats()
+    } catch (error) {
+      console.error('保存库房资产失败:', error)
+      alert('保存库房资产失败: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
+  const handleFilterChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setFilters({
+      ...filters,
+      [name]: type === 'checkbox' ? checked : value
+    })
+  }
+
+  const getStockStatus = (asset) => {
+    if (asset.available_quantity <= asset.minimum_stock) {
+      return { status: 'low', color: '#E05252', text: '库存不足' }
+    } else if (asset.available_quantity <= asset.minimum_stock * 2) {
+      return { status: 'medium', color: '#D4952B', text: '库存偏低' }
+    } else {
+      return { status: 'good', color: '#3A9E75', text: '库存充足' }
+    }
+  }
+
+  // 按品类分组资产
+  const assetsByCategory = assets.reduce((groups, asset) => {
+    const cat = asset.category || '未分类'
+    if (!groups[cat]) groups[cat] = []
+    groups[cat].push(asset)
+    return groups
+  }, {})
+
+  // 品类颜色映射
+  const categoryColors = {
+    '计算机设备': '#184e77', '显示设备': '#1e6091', '移动设备': '#1a759f', '输入设备': '#168aad',
+    '存储设备': '#34a0a4', '网络设备': '#52b69a', '其他配件': '#76c893', '未分类': '#99d98c'
   }
 
   return (
     <div className="warehouse-container">
       <div className="warehouse-header">
-        <div>
-          <h2>仓储物料管理</h2>
-          <p style={{ margin: 0, color: '#6b7280', fontSize: 13 }}>库房入口仅管理按数量入库的物料，不会创建台式机、笔记本电脑或平板电脑固定资产卡。</p>
-        </div>
-        {!isReadOnly && <button className="btn btn-primary" onClick={openAdd}>+ 添加仓储物料</button>}
+        <h2>IT资产库房管理</h2>
+        {!isReadonly && (
+        <button className="btn btn-primary" onClick={handleAddAsset}>
+          + 添加库房资产
+        </button>
+        )}
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
-      <div className="filters">
-        <input name="name" value={filters.name} onChange={changeFilter} placeholder="按物料名称筛选" />
-        <select name="primary_category_id" value={filters.primary_category_id} onChange={changeFilter}>
-          <option value="">所有一级分类</option>
-          {primaryCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-        </select>
-        <select name="secondary_category_id" value={filters.secondary_category_id} onChange={changeFilter} disabled={!filters.primary_category_id}>
-          <option value="">{filters.primary_category_id ? '所有二级分类' : '请先选择一级分类'}</option>
-          {secondaryCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-        </select>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <input type="checkbox" name="low_stock" checked={filters.low_stock} onChange={changeFilter} /> 仅显示低库存预警
-        </label>
-      </div>
-
-      {loading ? <div className="loading">加载中...</div> : assets.length === 0 ? (
-        <div className="empty-state"><h3>没有符合条件的仓储物料</h3><p>可调整筛选条件，或添加第一条物料记录。</p></div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table" style={{ width: '100%' }}>
-            <thead><tr><th>物料名称</th><th>一级分类</th><th>二级分类</th><th>可用数量</th><th>已分配</th><th>存放位置</th><th>低库存阈值</th><th>状态</th>{!isReadOnly && <th>操作</th>}</tr></thead>
-            <tbody>{assets.map(asset => (
-              <tr key={asset.id} onClick={() => onAssetSelect?.(asset)} style={{ cursor: onAssetSelect ? 'pointer' : 'default' }} className={selectedAsset?.id === asset.id ? 'selected' : ''}>
-                <td>{asset.name}</td><td>{asset.primary_category_name}</td><td>{asset.secondary_category_name}</td>
-                <td>{asset.available_quantity}</td><td>{asset.allocated_quantity}</td><td>{asset.location || '-'}</td><td>{asset.low_stock_threshold}</td>
-                <td>{asset.low_stock ? <span style={{ color: '#dc2626', fontWeight: 600 }}>低库存预警</span> : '库存正常'}</td>
-                {!isReadOnly && <td><button className="btn btn-secondary" onClick={(event) => { event.stopPropagation(); openEdit(asset) }}>编辑</button></td>}
-              </tr>
-            ))}</tbody>
-          </table>
+      {/* 统计卡片 */}
+      {stats && (
+        <div className="stats-grid">
+          <div className="stat-card" style={{ borderLeft: '4px solid #375B81' }}>
+            <div className="stat-value">{stats.total_items}</div>
+            <div className="stat-label">资产种类</div>
+          </div>
+          <div className="stat-card" style={{ borderLeft: '4px solid #E05252' }}>
+            <div className="stat-value">{stats.low_stock_items}</div>
+            <div className="stat-label">库存不足</div>
+          </div>
+          <div className="stat-card" style={{ borderLeft: '4px solid #3A9E75' }}>
+            <div className="stat-value">
+              {stats.category_stats.reduce((sum, cat) => sum + cat.available_quantity, 0)}
+            </div>
+            <div className="stat-label">可用库存</div>
+          </div>
+          <div className="stat-card" style={{ borderLeft: '4px solid #D4952B' }}>
+            <div className="stat-value">
+              {stats.category_stats.reduce((sum, cat) => sum + cat.total_quantity, 0)}
+            </div>
+            <div className="stat-label">总库存</div>
+          </div>
         </div>
       )}
 
-      {showModal && <WarehouseModal asset={editingAsset} primaryCategories={primaryCategories} onLoadSecondary={loadSecondaryCategories} onClose={() => setShowModal(false)} onSave={saveMaterial} />}
+      {/* 过滤器 */}
+      <div className="filters">
+        <input
+          type="text"
+          name="search"
+          placeholder="搜索资产名称、品牌、型号..."
+          value={filters.search}
+          onChange={handleFilterChange}
+        />
+        <select name="category" value={filters.category} onChange={handleFilterChange}>
+          <option value="">所有品类</option>
+          <option value="显示设备">显示设备</option>
+          <option value="输入设备">输入设备</option>
+          <option value="存储设备">存储设备</option>
+          <option value="网络设备">网络设备</option>
+          <option value="其他配件">其他配件</option>
+        </select>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <input
+            type="checkbox"
+            name="low_stock"
+            checked={filters.low_stock}
+            onChange={handleFilterChange}
+          />
+          仅显示库存不足
+        </label>
+      </div>
+
+      {/* 资产列表 - 按位置分组 */}
+      {loading ? (
+        <div className="loading">加载中...</div>
+      ) : assets.length === 0 ? (
+        <div className="empty-state">
+          <h3>没有找到库房资产</h3>
+          <p>添加第一个库房资产开始管理</p>
+        </div>
+      ) : (
+        <div className="warehouse-by-location">
+          {Object.entries(assetsByCategory).map(([category, catAssets]) => (
+            <div key={category} className="location-section">
+              <div className="location-header" style={{ borderLeftColor: categoryColors[category] || '#8E9EA4' }}>
+                <h3>{category}</h3>
+                <span className="location-count">{catAssets.length} 种资产</span>
+              </div>
+              <div className="location-assets-grid">
+                {catAssets.map(asset => {
+                  const stockStatus = getStockStatus(asset)
+                  return (
+                    <div 
+                      key={asset.id} 
+                      className={`warehouse-grid-card ${selectedAsset && selectedAsset.id === asset.id ? 'selected' : ''}`}
+                      onClick={() => onAssetSelect && onAssetSelect(asset)}
+                    >
+                      <div className="grid-card-header">
+                        <span className="grid-card-name">{asset.name}</span>
+                        <span 
+                          className="grid-card-status"
+                          style={{ backgroundColor: stockStatus.color }}
+                        >
+                          {asset.available_quantity}
+                        </span>
+                      </div>
+                      <div className="grid-card-info">
+                        {asset.location && <span className="grid-card-category">{asset.location}</span>}
+                        {asset.model && <span className="grid-card-model">{asset.model}</span>}
+                      </div>
+                      <div className="grid-card-quantity">
+                        <span>可用: <strong className="font-data">{asset.available_quantity}</strong></span>
+                        <span>总数: <span className="font-data">{asset.total_quantity}</span></span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 模态框 */}
+      {showModal && (
+        <WarehouseModal
+          asset={editingAsset}
+          onClose={() => setShowModal(false)}
+          onSave={handleSaveAsset}
+        />
+      )}
     </div>
   )
 }
 
-function WarehouseModal({ asset, primaryCategories: suppliedPrimaryCategories, onLoadSecondary, onClose, onSave }) {
-  const [form, setForm] = useState(EMPTY_MATERIAL)
-  const [primaryCategories, setPrimaryCategories] = useState(suppliedPrimaryCategories || [])
-  const [secondaryCategories, setSecondaryCategories] = useState([])
-  const [error, setError] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  const fetchPrimary = async () => {
-    if (suppliedPrimaryCategories?.length) return suppliedPrimaryCategories
-    const response = await axios.get(`${API_URL}/warehouse/categories/primary`)
-    setPrimaryCategories(response.data)
-    return response.data
-  }
-  const fetchSecondary = async (primaryId) => {
-    if (!primaryId) { setSecondaryCategories([]); return [] }
-    const items = onLoadSecondary ? await onLoadSecondary(primaryId) : (await axios.get(`${API_URL}/warehouse/categories/primary/${primaryId}/secondary`)).data
-    setSecondaryCategories(items)
-    return items
-  }
+function WarehouseModal({ asset, onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    category: '',
+    subcategory: '',
+    brand: '',
+    model: '',
+    receiver_name: '',
+    received_date: new Date().toISOString().split('T')[0],
+    total_quantity: 0,
+    available_quantity: 0,
+    allocated_quantity: 0,
+    minimum_stock: 5,
+    location: '',
+    notes: ''
+  })
+  
+  const [locations, setLocations] = useState([
+    'IT库房',
+    'A区货架',
+    'B区货架', 
+    'C区货架',
+    '临时存放区',
+    '办公区域'
+  ])
+  
+  const [users, setUsers] = useState([])
+  const [brands, setBrands] = useState([])
 
   useEffect(() => {
-    let active = true
-    const initialise = async () => {
-      try {
-        await fetchPrimary()
-        if (!asset) { if (active) setForm(EMPTY_MATERIAL); return }
-        const primaryId = String(asset.primary_category_id || '')
-        if (active) setForm({
-          name: asset.name || '', primary_category_id: primaryId, secondary_category_id: '',
-          available_quantity: asset.available_quantity ?? 0, allocated_quantity: asset.allocated_quantity ?? 0,
-          low_stock_threshold: asset.low_stock_threshold ?? asset.minimum_stock ?? 0, location: asset.location || '',
-          issue_policy: asset.issue_policy || 'CONSUMABLE', brand: asset.brand || '', model: asset.model || '', notes: asset.notes || '',
-        })
-        const children = await fetchSecondary(primaryId)
-        if (active && children.some(item => item.id === asset.secondary_category_id)) {
-          setForm(current => ({ ...current, secondary_category_id: String(asset.secondary_category_id) }))
-        }
-      } catch (requestError) {
-        if (active) setError(requestError.response?.data?.detail || '加载分类失败')
-      }
+    axios.get(`${API_URL}/locations/`).then(res => setLocations(res.data.map(l => l.name))).catch(() => {})
+    axios.get(`${API_URL}/brands/`).then(res => setBrands(res.data)).catch(() => {})
+    fetchUsers()
+    
+    if (asset) {
+      setFormData({
+        name: asset.name || '',
+        category: asset.category || '',
+        subcategory: asset.subcategory || '',
+        brand: asset.brand || '',
+        model: asset.model || '',
+        receiver_name: asset.receiver_name || '',
+        received_date: asset.received_date ? asset.received_date.split('T')[0] : new Date().toISOString().split('T')[0],
+        total_quantity: asset.total_quantity || 0,
+        available_quantity: asset.available_quantity || 0,
+        allocated_quantity: asset.allocated_quantity || 0,
+        minimum_stock: asset.minimum_stock || 5,
+        location: asset.location || '',
+        notes: asset.notes || ''
+      })
     }
-    initialise()
-    return () => { active = false }
   }, [asset])
 
-  const changeValue = async (event) => {
-    const { name, value } = event.target
-    if (name === 'primary_category_id') {
-      setForm(current => ({ ...current, primary_category_id: value, secondary_category_id: '' }))
-      setError('')
-      try { await fetchSecondary(value) } catch (requestError) { setError(requestError.response?.data?.detail || '获取二级分类失败') }
-      return
-    }
-    setForm(current => ({ ...current, [name]: value }))
-  }
-
-  const submit = async (event) => {
-    event.preventDefault()
-    const validSecondary = secondaryCategories.some(category => String(category.id) === String(form.secondary_category_id))
-    if (!form.primary_category_id || !form.secondary_category_id || !validSecondary) {
-      setError('请选择有效且从属的一级分类与二级分类。')
-      return
-    }
+  const fetchUsers = async () => {
     try {
-      setSaving(true)
-      setError('')
-      await onSave(form)
-    } catch (requestError) {
-      setError(requestError.message || '保存仓储物料失败')
-    } finally { setSaving(false) }
+      const response = await axios.get(`${API_URL}/auth/mis-users`)
+      setUsers(response.data)
+    } catch (error) {
+      console.error('获取用户列表失败:', error)
+    }
   }
 
-  return <div className="modal-overlay" onClick={onClose}><div className="modal-content" onClick={event => event.stopPropagation()}>
-    <div className="modal-header"><h2>{asset ? '编辑仓储物料' : '添加仓储物料'}</h2><button className="close-btn" onClick={onClose}>&times;</button></div>
-    <form onSubmit={submit}><div className="modal-body">
-      {error && <div className="form-error">{error}</div>}
-      <div className="form-row"><div className="form-group"><label>物料名称 *</label><input name="name" required value={form.name} onChange={changeValue} /></div><div className="form-group"><label>领用策略 *</label><select name="issue_policy" value={form.issue_policy} onChange={changeValue}><option value="CONSUMABLE">一次性消耗品</option><option value="RETURNABLE">待归还</option></select></div></div>
-      <div className="form-row"><div className="form-group"><label>一级分类 *</label><select name="primary_category_id" required value={form.primary_category_id} onChange={changeValue}><option value="">选择一级分类</option>{primaryCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div><div className="form-group"><label>二级分类 *</label><select name="secondary_category_id" required disabled={!form.primary_category_id} value={form.secondary_category_id} onChange={changeValue}><option value="">{form.primary_category_id ? '选择二级分类' : '请先选择一级分类'}</option>{secondaryCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div></div>
-      <div className="form-row"><div className="form-group"><label>可用数量 *</label><input type="number" min="0" name="available_quantity" required value={form.available_quantity} onChange={changeValue} /></div><div className="form-group"><label>已分配数量 *</label><input type="number" min="0" name="allocated_quantity" required value={form.allocated_quantity} onChange={changeValue} /></div></div>
-      <div className="form-row"><div className="form-group"><label>低库存阈值 *</label><input type="number" min="0" name="low_stock_threshold" required value={form.low_stock_threshold} onChange={changeValue} /></div><div className="form-group"><label>存放位置</label><input name="location" value={form.location} onChange={changeValue} /></div></div>
-      <div className="form-row"><div className="form-group"><label>品牌</label><input name="brand" value={form.brand} onChange={changeValue} /></div><div className="form-group"><label>型号</label><input name="model" value={form.model} onChange={changeValue} /></div></div>
-      <div className="form-group"><label>备注</label><textarea name="notes" rows="3" value={form.notes} onChange={changeValue} /></div>
-    </div><div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>取消</button><button type="submit" className="btn btn-primary" disabled={saving}>{saving ? '保存中...' : '保存'}</button></div></form>
-  </div></div>
+  const handleChange = (e) => {
+    const { name, value, type } = e.target
+    if (type === 'number') {
+      // 允许完全删除数字，避免010这样的情况
+      if (value === '') {
+        setFormData({ ...formData, [name]: '' })
+      } else {
+        const numValue = parseInt(value)
+        setFormData({ ...formData, [name]: isNaN(numValue) ? 0 : numValue })
+      }
+    } else {
+      setFormData({ ...formData, [name]: value })
+    }
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSave(formData)
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{asset ? '编辑库房资产' : '添加库房资产'}</h2>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+          <div className="modal-body">
+            <div className="form-row">
+              <div className="form-group">
+                <label>资产名称 *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>品类 *</label>
+                <select name="category" value={formData.category} onChange={handleChange} required>
+                  <option value="">选择品类</option>
+                  <option value="显示设备">显示设备</option>
+                  <option value="输入设备">输入设备</option>
+                  <option value="存储设备">存储设备</option>
+                  <option value="网络设备">网络设备</option>
+                  <option value="其他配件">其他配件</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>子分类</label>
+                <input type="text" name="subcategory" value={formData.subcategory} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label>品牌</label>
+                <select name="brand" value={formData.brand} onChange={handleChange}>
+                  <option value="">选择品牌</option>
+                  {brands.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>型号</label>
+                <input type="text" name="model" value={formData.model} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label>入库人 *</label>
+                <select name="receiver_name" value={formData.receiver_name} onChange={handleChange} required>
+                  <option value="">选择入库人</option>
+                  {users.map(user => (
+                    <option key={user.id} value={user.username}>{user.username}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>入库日期 *</label>
+                <input 
+                  type="date" 
+                  name="received_date" 
+                  value={formData.received_date} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label>总数量 *</label>
+                <input
+                  type="number"
+                  name="total_quantity"
+                  value={formData.total_quantity}
+                  onChange={handleChange}
+                  min="0"
+                  required
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>可用数量 *</label>
+                <input
+                  type="number"
+                  name="available_quantity"
+                  value={formData.available_quantity}
+                  onChange={handleChange}
+                  min="0"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>已分配数量</label>
+                <input
+                  type="number"
+                  name="allocated_quantity"
+                  value={formData.allocated_quantity}
+                  onChange={handleChange}
+                  min="0"
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>最低库存</label>
+                <input
+                  type="number"
+                  name="minimum_stock"
+                  value={formData.minimum_stock}
+                  onChange={handleChange}
+                  min="1"
+                />
+              </div>
+              <div className="form-group">
+                {/* 空白占位 */}
+              </div>
+            </div>
+            <div className="form-group">
+              <label>存放位置</label>
+              <select name="location" value={formData.location} onChange={handleChange}>
+                <option value="">选择位置</option>
+                {locations.map(location => (
+                  <option key={location} value={location}>{location}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>备注</label>
+              <textarea name="notes" value={formData.notes} onChange={handleChange} rows="3" />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>取消</button>
+            <button type="submit" className="btn btn-primary">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
 }
 
 export default Warehouse
