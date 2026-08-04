@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 const API_URL = import.meta.env.VITE_API_URL || ''
 
 function ReturnManagement({ onAssetClick }) {
-  const {isReadyOnly: isReadOnly} = useAuth()
+  const {isReadyOnly} = useAuth()
   const navigate = useNavigate()
   const [returnRecords, setReturnRecords] = useState([])
   const [idleAssetsCount, setIdleAssetsCount] = useState(0)
@@ -101,7 +101,7 @@ function ReturnManagement({ onAssetClick }) {
           }}>
             <Package size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} /> 库房闲置
           </button>
-          {!isReadOnly && (
+          {!isReadyOnly && (
           <button className="btn btn-primary" onClick={handleAddRecord}>
             + 添加归还记录
            </button>
@@ -157,7 +157,7 @@ function ReturnManagement({ onAssetClick }) {
               onEdit={handleEditRecord}
               title="待归还记录"
               emptyMessage="暂无待归还记录"
-              isReadyOnly={isReadOnly}
+              isReadyOnly={isReadyOnly}
             />
           )}
           
@@ -167,7 +167,7 @@ function ReturnManagement({ onAssetClick }) {
               onEdit={handleEditRecord}
               title="已归还记录"
               emptyMessage="暂无已归还记录"
-              isReadyOnly={isReadOnly}
+              isReadyOnly={isReadyOnly}
             />
           )}
         </div>

@@ -277,7 +277,13 @@ function Sidebar({ assets, selectedAsset, onSelectAsset, filters, setFilters, on
                 <option value="">全部品类</option>
                 <option value="台式机">台式机</option>
                 <option value="笔记本电脑">笔记本电脑</option>
-                <option value="平板电脑">平板电脑</option>
+                <option value="移动设备">移动设备</option>
+                <option value="手机">手机</option>
+                <option value="无线鼠标">无线鼠标</option>
+                <option value="显示器">显示器</option>
+                <option value="打印机">打印机</option>
+                <option value="网络设备">网络设备</option>
+                <option value="其他设备">其他设备</option>
               </select>
             </div>
 

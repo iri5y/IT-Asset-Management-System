@@ -1,6 +1,8 @@
 # Frontend
 node_modules/
 dist/
+!frontend/dist/
+!frontend/dist/**
 .vite/
 
 # Backend
@@ -49,3 +51,14 @@ Thumbs.db
 
 # Kiro
 .kiro/
+
+__pycache__/
+*.pyc
+.env
+node_modules/
+dist/
+
+backend/**/__pycache__/
+*.pyc
+
+frontend/dist/
