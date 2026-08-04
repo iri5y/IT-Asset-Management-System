@@ -14,7 +14,7 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 const MAX_FILE_SIZE = 10 * 1024 * 1024
-const STEPS = ['上传', '预览', '映射/策略', '结果']
+const STEPS = ['上传', '预览', '确认', '结果']
 const FIELD_META = {
   department: { label: '部门', type: 'DEPARTMENT' },
   brand: { label: '品牌', type: 'BRAND' },
@@ -22,7 +22,7 @@ const FIELD_META = {
 }
 const CLASSIFICATION_LABELS = {
   VALID: '有效',
-  MAPPING_REQUIRED: '待映射',
+  MAPPING_REQUIRED: '待确认',
   DUPLICATE: '重复',
   ERROR: '错误',
 }
@@ -679,7 +679,7 @@ function ImportWizard({ onClose, onImportSuccess }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content import-wizard-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="import-wizard-title">
         <div className="modal-header">
-          <h2 id="import-wizard-title"><FileSpreadsheet size={19} />企业级资产导入</h2>
+          <h2 id="import-wizard-title"><FileSpreadsheet size={19} />资产导入</h2>
           <button className="close-btn" onClick={onClose} aria-label="关闭">&times;</button>
         </div>
         <StepIndicator currentStep={step} />

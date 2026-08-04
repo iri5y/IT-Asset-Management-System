@@ -408,13 +408,13 @@ function AssetDetail({ asset, onClose, onEdit, onRefresh, isAdmin }) {
                 <Wrench size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
                 配件记录
               </div>
-              {!isReadOnly && <button
+              <button
                 className="btn btn-sm btn-primary"
                 onClick={handleOpenPartModal}
                 style={{ fontSize: 12, padding: '3px 10px', gap: 4 }}
               >
                 <Plus size={12} /> 添加配件
-              </button>}
+              </button>
             </div>
             {partLogs.length === 0 ? (
               <div style={{ fontSize: 13, color: 'var(--color-muted)', padding: '8px 0' }}>暂无配件记录</div>

@@ -22,7 +22,6 @@ from typing import Optional
 
 import models
 import schemas
-from category_policy import ASSET_CATEGORY_NAMES, asset_category_code, is_fixed_asset_category
 
 
 # ========== 精确列头映射表（中文 → 英文字段名）==========
@@ -418,7 +417,6 @@ def validate_rows(
     errors: list[dict] = []
 
     seen_asset_tags: dict[str, int] = {}
-    seen_serial_numbers: dict[str, int] = {}
 
     for idx, row in enumerate(rows):
         row_number = idx + 2  # Excel 行号从 2 开始
@@ -453,19 +451,9 @@ def validate_rows(
             category_normalized = CATEGORY_NORMALIZE.get(category_raw, category_raw)
             row_data["category"] = category_normalized
 
-        # ── 步骤 3：品类推断填充与三层模型校验 ──
+        # ── 步骤 3：品类推断填充 ──
         if not row_data.get("category") and inferred_category:
             row_data["category"] = inferred_category
-        category_value = row_data.get("category")
-        category_code = asset_category_code(category_value or "")
-        if category_code:
-            row_data["category"] = ASSET_CATEGORY_NAMES[category_code]
-        elif category_value and not is_fixed_asset_category(category_value):
-            add_error(
-                "该物品不属于固定资产，请导入低值领用物品或仓储物料",
-                skip_reason="validation",
-            )
-            continue
 
         # ── 步骤 4：Pydantic 验证（AssetCreate）──
         # additional_info 不在 AssetCreate 的校验范围内，先剔除
@@ -481,21 +469,6 @@ def validate_rows(
                 messages.append(msg)
             add_error("; ".join(messages), skip_reason="validation")
             continue
-
-        # 文件内 SN 重复在写库前报告，避免依赖数据库唯一约束失败。
-        serial_number_val = row_data.get("serial_number")
-        normalized_sn = (
-            str(serial_number_val).strip().upper() if serial_number_val else None
-        )
-        if normalized_sn:
-            row_data["serial_number"] = normalized_sn
-            if normalized_sn in seen_serial_numbers:
-                add_error(
-                    f"序列号 {normalized_sn} 在文件中重复（首次出现于第 {seen_serial_numbers[normalized_sn]} 行）",
-                    skip_reason="conflict",
-                )
-                continue
-            seen_serial_numbers[normalized_sn] = row_number
 
         # ── 步骤 5a：asset_tag 格式验证 ──
         if not asset_tag_val or not ASSET_TAG_PATTERN.match(str(asset_tag_val)):
