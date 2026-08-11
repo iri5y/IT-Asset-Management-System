@@ -62,3 +62,6 @@ backend/**/__pycache__/
 *.pyc
 
 frontend/dist/
+
+#md
+update_notes.md

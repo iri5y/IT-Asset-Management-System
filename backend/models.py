@@ -126,7 +126,7 @@ class Asset(Base):
     # 扩展字段：存储导入时 Excel 中未映射到固定列的额外数据（JSON）
     additional_info = Column(JSON, nullable=True)
 
-    # 标记该资产是否由库房发放创建（True 时归还不触发库房数量自动同步，因为库存由库房模块独立管理）
+    # 历史兼容字段；固定资产与库房消耗品已分域，不参与库存联动
     from_warehouse = Column(Boolean, default=False, nullable=False)
 
     created_at = Column(DateTime, default=china_now)

@@ -273,21 +273,58 @@ function WeeklyReportSummary() {
   const categoryIcons = {
     '台式机': <Monitor size={18} color="#fff" />,
     '笔记本电脑': <Laptop size={18} color="#fff" />,
-    '移动设备': <Tablet size={18} color="#fff" />,
+    '平板电脑': <Tablet size={18} color="#fff" />,
+    '显示设备': <Monitor size={18} color="#fff" />,
     '手机': <Phone size={18} color="#fff" />,
-    '无线鼠标': <Mouse size={18} color="#fff" />,
+    '输入设备': <Mouse size={18} color="#fff" />,
   }
   const colors = ['#184e77', '#1e6091', '#1a759f', '#168aad', '#34a0a4', '#52b69a', '#76c893', '#99d98c', '#b5e48c', '#d9ed92']
+  const parts = data?.parts || { total_quantity: 0, categories: [] }
 
   const copyToClipboard = () => {
     if (!data) return
-    let text = `本周发放资产统计 (${data.week_start} ~ ${data.week_end})\n\n`
-    data.categories.forEach(cat => {
+    let text = `本周库房发放统计 (${data.week_start} ~ ${data.week_end})\n\n`
+    text += '固定资产发放（闲置 → 使用中）\n'
+    data.categories.filter(cat => cat.count > 0).forEach(cat => {
       text += `${cat.category}: ${cat.count} 台\n`
       cat.items.forEach(item => { text += `  - ${item.name} (${item.model})\n` })
     })
-    text += `\n总计发放: ${data.total} 台\n报告生成: ${new Date().toLocaleString('zh-CN')}`
+    text += `固定资产合计: ${data.total} 台\n\n配件领用出库\n`
+    parts.categories.filter(cat => cat.quantity > 0).forEach(cat => {
+      text += `${cat.category}: ${cat.quantity} 件\n`
+      cat.items.forEach(item => { text += `  - ${item.name} × ${item.quantity} 件 (${item.model})\n` })
+    })
+    text += `配件合计: ${parts.total_quantity} 件\n报告生成: ${new Date().toLocaleString('zh-CN')}`
     navigator.clipboard.writeText(text).then(() => alert('已复制到剪贴板！'))
+  }
+
+  const renderCategoryList = (categories, quantityKey, unit, emptyText) => {
+    const activeCategories = categories.filter(category => category[quantityKey] > 0)
+    if (activeCategories.length === 0) {
+      return <div style={{ color: 'var(--color-muted)', fontSize: 12, padding: '8px 0' }}>{emptyText}</div>
+    }
+    return activeCategories.map((category, index) => (
+      <div key={category.category} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 10px', background: 'var(--color-bg)', borderRadius: 'var(--radius)', border: '1px solid var(--color-border)' }}>
+        <div style={{ width: 32, height: 32, borderRadius: 'var(--radius)', background: colors[index % colors.length], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+          {categoryIcons[category.category] || <BarChart3 size={16} color="#fff" />}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-heading)' }}>{category.category}</span>
+            <span className="font-data" style={{ fontSize: 14, fontWeight: 700, color: colors[index % colors.length] }}>{category[quantityKey]} {unit}</span>
+          </div>
+          {category.items?.length > 0 && (
+            <div style={{ marginTop: 4 }}>
+              {category.items.map((item, itemIndex) => (
+                <div key={`${item.name}-${itemIndex}`} style={{ fontSize: 11, color: 'var(--color-muted)', lineHeight: 1.6 }}>
+                  {item.name}{quantityKey === 'quantity' && ` × ${item.quantity} 件`} <span style={{ color: 'var(--color-body)' }}>({item.model})</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    ))
   }
 
   if (loading) return <div className="weekly-report-section"><div className="weekly-report-card" style={{ textAlign: 'center', padding: 30, color: '#8E9EA4' }}>加载中...</div></div>
@@ -297,7 +334,7 @@ function WeeklyReportSummary() {
       <div className="weekly-report-card">
         <div className="weekly-report-header">
           <div>
-            <h3><BarChart3 size={18} style={{ verticalAlign: 'middle', marginRight: 6 }} /> 本周发放资产统计</h3>
+            <h3><BarChart3 size={18} style={{ verticalAlign: 'middle', marginRight: 6 }} /> 本周库房发放统计</h3>
             {data && <p className="report-period">统计周期: {data.week_start} (周五) ~ {data.week_end} (周四)</p>}
           </div>
           <button className="btn btn-copy" onClick={copyToClipboard}><ClipboardCopy size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> 复制</button>
@@ -305,34 +342,28 @@ function WeeklyReportSummary() {
 
         {data && (
           <>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              {data.categories.map((cat, i) => (
-                <div key={cat.category} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 10px', background: 'var(--color-bg)', borderRadius: 'var(--radius)', border: '1px solid var(--color-border)' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 'var(--radius)', background: colors[i % colors.length], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-                    {categoryIcons[cat.category] || <BarChart3 size={16} color="#fff" />}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-heading)' }}>{cat.category}</span>
-                      <span className="font-data" style={{ fontSize: 14, fontWeight: 700, color: cat.count > 0 ? colors[i % colors.length] : 'var(--color-muted)' }}>{cat.count}</span>
-                    </div>
-                    {cat.items.length > 0 && (
-                      <div style={{ marginTop: 4 }}>
-                        {cat.items.map((item, j) => (
-                          <div key={j} style={{ fontSize: 11, color: 'var(--color-muted)', lineHeight: 1.6 }}>
-                            {item.name} <span style={{ color: 'var(--color-body)' }}>({item.model})</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-heading)', marginBottom: 8 }}>
+              固定资产发放（仅统计闲置 → 使用中）
             </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+              {renderCategoryList(data.categories, 'count', '台', '本周暂无从库房闲置发放的固定资产')}
+            </div>
+
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-heading)', marginBottom: 8 }}>
+              配件领用出库
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+              {renderCategoryList(parts.categories, 'quantity', '件', '本周暂无配件领用出库记录')}
+            </div>
+
             <div className="report-summary">
               <div className="summary-item">
-                <span className="summary-label">本周总计发放:</span>
+                <span className="summary-label">固定资产发放:</span>
                 <span className="summary-value font-data">{data.total} 台</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">配件领用出库:</span>
+                <span className="summary-value font-data">{parts.total_quantity} 件</span>
               </div>
             </div>
           </>

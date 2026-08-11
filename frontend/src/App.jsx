@@ -528,7 +528,7 @@ function MainApp() {
                       setSelectedWarehouseAsset(null)
                     }}
                   >
-                    库存管理
+                    配件管理
                   </button>
                   <button 
                     className={`nav-tab ${warehouseSubTab === 'idle' ? 'active' : ''}`}

@@ -15,7 +15,6 @@ class AssetCategoryCode(str, Enum):
 
 
 class IssuePolicy(str, Enum):
-    RETURNABLE = "RETURNABLE"
     CONSUMABLE = "CONSUMABLE"
 
 
@@ -27,13 +26,13 @@ class FixedAssetStatus(str, Enum):
 
 
 class PrimaryCategoryCode(str, Enum):
-    TERMINAL_EQUIPMENT = "TERMINAL_EQUIPMENT"
-    DISPLAY_AUDIO_VIDEO = "DISPLAY_AUDIO_VIDEO"
-    INPUT_OFFICE_PERIPHERALS = "INPUT_OFFICE_PERIPHERALS"
-    STORAGE_REPAIR_PARTS = "STORAGE_REPAIR_PARTS"
+    DISPLAY_DEVICES = "DISPLAY_DEVICES"
+    AUDIO_DEVICES = "AUDIO_DEVICES"
+    PHONES = "PHONES"
+    INPUT_DEVICES = "INPUT_DEVICES"
+    STORAGE_DEVICES = "STORAGE_DEVICES"
     CABLES_CONNECTORS = "CABLES_CONNECTORS"
-    NETWORK_SERVER_ROOM_CONSUMABLES = "NETWORK_SERVER_ROOM_CONSUMABLES"
-    IT_TOOLS_LOAN_ITEMS = "IT_TOOLS_LOAN_ITEMS"
+    TOOLS = "TOOLS"
     OFFICE_GENERAL_CONSUMABLES = "OFFICE_GENERAL_CONSUMABLES"
 
 
@@ -43,22 +42,24 @@ ASSET_CATEGORY_NAMES: Final[dict[AssetCategoryCode, str]] = {
     AssetCategoryCode.PD: "平板电脑",
 }
 LEGACY_ASSET_CATEGORY_ALIASES: Final[dict[str, str]] = {"移动设备": "平板电脑"}
-NON_FIXED_ASSET_CARD_ERROR: Final[str] = "请改入低值领用或仓储物料"
-INVALID_ISSUE_POLICY_ERROR: Final[str] = "领用策略仅支持“待归还”或“一次性消耗品”"
+NON_FIXED_ASSET_CARD_ERROR: Final[str] = "固定资产仅支持台式机、笔记本电脑和平板电脑"
+INVALID_ISSUE_POLICY_ERROR: Final[str] = "库房物料只支持一次性消耗品领用策略"
 INVALID_FIXED_ASSET_STATUS_ERROR: Final[str] = "固定资产状态仅支持“闲置、使用中、维修中、报废”"
 
 PRIMARY_CATEGORY_NAMES: Final[dict[PrimaryCategoryCode, str]] = {
-    PrimaryCategoryCode.TERMINAL_EQUIPMENT: "终端设备库存",
-    PrimaryCategoryCode.DISPLAY_AUDIO_VIDEO: "显示与音视频设备",
-    PrimaryCategoryCode.INPUT_OFFICE_PERIPHERALS: "输入与办公外设",
-    PrimaryCategoryCode.STORAGE_REPAIR_PARTS: "存储与维修备件",
+    PrimaryCategoryCode.DISPLAY_DEVICES: "显示设备",
+    PrimaryCategoryCode.AUDIO_DEVICES: "音频设备",
+    PrimaryCategoryCode.PHONES: "手机",
+    PrimaryCategoryCode.INPUT_DEVICES: "输入设备",
+    PrimaryCategoryCode.STORAGE_DEVICES: "存储设备",
     PrimaryCategoryCode.CABLES_CONNECTORS: "线缆与连接配件",
-    PrimaryCategoryCode.NETWORK_SERVER_ROOM_CONSUMABLES: "网络与机房耗材",
-    PrimaryCategoryCode.IT_TOOLS_LOAN_ITEMS: "IT工具与借用物品",
+    PrimaryCategoryCode.TOOLS: "工具",
     PrimaryCategoryCode.OFFICE_GENERAL_CONSUMABLES: "办公与通用耗材",
 }
+CONSUMABLE_CATEGORY_NAMES: Final[frozenset[str]] = frozenset(
+    PRIMARY_CATEGORY_NAMES.values()
+)
 ISSUE_POLICY_NAMES: Final[dict[IssuePolicy, str]] = {
-    IssuePolicy.RETURNABLE: "待归还",
     IssuePolicy.CONSUMABLE: "一次性消耗品",
 }
 FIXED_ASSET_CATEGORY_OPTIONS: Final[tuple[AssetCategoryCode, ...]] = tuple(
@@ -70,15 +71,6 @@ FIXED_ASSET_STATUSES: Final[tuple[FixedAssetStatus, ...]] = tuple(
 PRIMARY_CATEGORY_SEEDS: Final[tuple[tuple[str, str], ...]] = tuple(
     (category.value, PRIMARY_CATEGORY_NAMES[category])
     for category in PrimaryCategoryCode
-)
-
-# 这些低值物品在保存目录项时只能选择待归还策略。
-RETURNABLE_ONLY_MATERIALS: Final[frozenset[str]] = frozenset(
-    {"显示器", "扬声器", "扩展坞", "摄像头"}
-)
-# 这些低值物品必须可选一次性消耗品；目录可按业务需要保留待归还策略。
-CONSUMABLE_OPTION_MATERIALS: Final[frozenset[str]] = frozenset(
-    {"鼠标", "键盘", "鼠标垫", "线材", "小配件"}
 )
 
 
@@ -116,6 +108,18 @@ def require_fixed_asset_category(value: str | AssetCategoryCode) -> AssetCategor
     return category
 
 
+def is_consumable_category(value: str) -> bool:
+    return _clean(value) in CONSUMABLE_CATEGORY_NAMES
+
+
+def require_consumable_category(value: str) -> str:
+    category = _clean(value)
+    if category not in CONSUMABLE_CATEGORY_NAMES:
+        allowed = "、".join(PRIMARY_CATEGORY_NAMES.values())
+        raise CategoryPolicyError(f"消耗品品类仅支持：{allowed}")
+    return category
+
+
 def require_fixed_asset_status(value: str | FixedAssetStatus) -> FixedAssetStatus:
     if isinstance(value, FixedAssetStatus):
         return value
@@ -141,21 +145,10 @@ def allowed_issue_policies(
     primary_category: str | PrimaryCategoryCode | None,
     material_name: str | None = None,
 ) -> frozenset[IssuePolicy]:
-    """根据一级分类与受限低值物品返回可保存的领用策略。"""
-    primary_code = (
-        _primary_category_code(primary_category)
-        if primary_category is not None
-        else None
-    )
-    if primary_code == PrimaryCategoryCode.OFFICE_GENERAL_CONSUMABLES:
-        return frozenset({IssuePolicy.CONSUMABLE})
-
-    normalized_name = _clean(material_name) if material_name else ""
-    if normalized_name in RETURNABLE_ONLY_MATERIALS:
-        return frozenset({IssuePolicy.RETURNABLE})
-    if normalized_name in CONSUMABLE_OPTION_MATERIALS:
-        return frozenset({IssuePolicy.CONSUMABLE})
-    return frozenset(IssuePolicy)
+    """八类库房物料统一按一次性消耗品管理。"""
+    if primary_category is None or _primary_category_code(primary_category) is None:
+        return frozenset()
+    return frozenset({IssuePolicy.CONSUMABLE})
 
 
 def require_issue_policy(
@@ -174,7 +167,7 @@ def require_issue_policy(
             PrimaryCategoryCode.OFFICE_GENERAL_CONSUMABLES
         ):
             raise CategoryPolicyError("办公与通用耗材仅支持“一次性消耗品”领用策略")
-        raise CategoryPolicyError("该低值物品不支持所选领用策略")
+        raise CategoryPolicyError("该库房物料不支持所选领用策略")
     return policy
 
 

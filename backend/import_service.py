@@ -22,6 +22,7 @@ from typing import Optional
 
 import models
 import schemas
+from category_policy import normalize_asset_category
 
 
 # ========== 精确列头映射表（中文 → 英文字段名）==========
@@ -155,7 +156,7 @@ FUZZY_ALIAS: dict[str, str] = {
     "订单号": "PO号",
 }
 
-# 品类名称标准化映射（Excel 中的变体 → 系统标准值）
+# 品类名称标准化映射（Excel 中的变体 → 三类固定资产）
 CATEGORY_NORMALIZE: dict[str, str] = {
     "台式电脑": "台式机",
     "台式": "台式机",
@@ -163,10 +164,11 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     "笔记本": "笔记本电脑",
     "laptop": "笔记本电脑",
     "notebook": "笔记本电脑",
-    "平板": "移动设备",
-    "ipad": "移动设备",
-    "tablet": "移动设备",
-    "PAD": "移动设备",
+    "平板": "平板电脑",
+    "ipad": "平板电脑",
+    "tablet": "平板电脑",
+    "PAD": "平板电脑",
+    "移动设备": "平板电脑",
 }
 
 # n/a 类占位符，导入时统一转为 None
@@ -183,18 +185,11 @@ VALID_STATUSES: set[str] = {"闲置", "使用中", "维修中", "报废"}
 # asset_tag 格式正则：ZS-XXXX-NNNNNN（如 ZS-PC26-000001）
 ASSET_TAG_PATTERN: re.Pattern = re.compile(r"^ZS-[A-Za-z0-9]{4}-\d{6}$")
 
-# ========== 品类自动推断规则（文件名关键词 → 品类）==========
-# 按优先级排列，先匹配先生效
+# ========== 品类自动推断规则（文件名关键词 → 固定资产品类）==========
 FILENAME_CATEGORY_RULES: list[tuple[list[str], str]] = [
-    (["笔记本", "laptop", "notebook", "nb"],        "笔记本电脑"),
-    (["台式", "台式电脑", "desktop", "pc"],              "台式机"),
-    (["服务器", "server", "srv"],                    "服务器"),
-    (["移动设备", "pad", "ipad", "平板", "tablet"],  "移动设备"),
-    (["手机", "phone", "mobile"],                    "手机"),
-    (["显示器", "monitor", "display"],               "显示器"),
-    (["打印机", "printer"],                          "打印机"),
-    (["网络", "network", "路由", "交换机", "switch"], "网络设备"),
-    (["鼠标", "mouse", "键盘", "keyboard"],          "无线鼠标"),
+    (["笔记本", "laptop", "notebook", "nb"], "笔记本电脑"),
+    (["台式", "台式电脑", "desktop", "pc"], "台式机"),
+    (["移动设备", "pad", "ipad", "平板", "tablet"], "平板电脑"),
 ]
 
 # 模板示例数据
@@ -459,7 +454,8 @@ def validate_rows(
         # additional_info 不在 AssetCreate 的校验范围内，先剔除
         pydantic_data = {k: v for k, v in row_data.items() if k != "additional_info"}
         try:
-            schemas.AssetCreate(**pydantic_data)
+            validated_asset = schemas.AssetCreate(**pydantic_data)
+            row_data["category"] = validated_asset.category
         except ValidationError as e:
             messages = []
             for err in e.errors():
@@ -541,56 +537,6 @@ def validate_rows(
     return valid_rows, errors
 
 
-def _sync_warehouse_quantity_import(db: Session, category: str, delta: int, operator_name: str = None):
-    """
-    同步库房资产可用数量（导入服务内部使用，不单独 commit）。
-    与 main.py 中的 _sync_warehouse_quantity 逻辑一致，但独立实现避免循环导入。
-    """
-    if delta == 0:
-        return
-
-    # 资产品类 → 库房品类 映射（与 main.py 保持一致）
-    ASSET_TO_WAREHOUSE_CATEGORY = {
-        "台式机":    "计算机设备",
-        "笔记本电脑": "计算机设备",
-        "显示器":    "显示设备",
-        "移动设备":  "移动设备",
-        "手机":      "移动设备",
-        "无线鼠标":  "输入设备",
-        "打印机":    "其他配件",
-        "网络设备":  "网络设备",
-    }
-    warehouse_category = ASSET_TO_WAREHOUSE_CATEGORY.get(category, category)
-
-    wh_asset = (
-        db.query(models.WarehouseAsset)
-        .filter(models.WarehouseAsset.category == warehouse_category)
-        .order_by(models.WarehouseAsset.available_quantity.desc())
-        .with_for_update()
-        .first()
-    )
-    if not wh_asset:
-        return
-    old_available = wh_asset.available_quantity
-    old_allocated = wh_asset.allocated_quantity
-    new_available = max(0, wh_asset.available_quantity + delta)
-    wh_asset.available_quantity = new_available
-    wh_asset.allocated_quantity = max(0, wh_asset.total_quantity - wh_asset.available_quantity)
-    db.flush()
-    desc = (
-        f"批量导入联动更新: 可用数量 {old_available} → {wh_asset.available_quantity}, "
-        f"已分配 {old_allocated} → {wh_asset.allocated_quantity}"
-    )
-    wh_log = models.WarehouseAssetLog(
-        asset_id=wh_asset.id,
-        action="入库（批量导入）",
-        description=desc,
-        operator=operator_name,
-    )
-    db.add(wh_log)
-    db.flush()
-
-
 def bulk_insert_assets(
     valid_rows: list[dict],
     db: Session,
@@ -644,9 +590,6 @@ def bulk_insert_assets(
         )
         db.add(log)
         db.flush()
-
-        if db_asset.status == "闲置":
-            _sync_warehouse_quantity_import(db, db_asset.category, +1, operator_name)
 
         inserted_count += 1
 

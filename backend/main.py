@@ -12,6 +12,11 @@ import json
 import io
 
 import import_service
+from category_policy import (
+    ASSET_CATEGORY_NAMES,
+    CategoryPolicyError,
+    require_fixed_asset_category,
+)
 
 from import_v2.classifier import Classifier
 from import_v2.domain_models import (
@@ -117,62 +122,6 @@ def read_root():
     return {"message": "IT Asset Management API"}
 
 
-
-
-def _sync_warehouse_quantity(db: Session, category: str, delta: int, operator_name: str = None):
-    """同步库房资产可用数量（在已有事务中调用，不单独 commit）。
-    使用 with_for_update() 加行锁，防止并发操作导致数量不一致。
-    资产品类与库房品类的映射关系：
-      台式机/笔记本电脑 → 计算机设备
-      显示器           → 显示设备
-      移动设备/手机     → 移动设备
-      无线鼠标         → 输入设备
-      打印机           → 其他配件
-      网络设备         → 网络设备
-    """
-    if delta == 0:
-        return
-
-    # 资产品类 → 库房品类 映射
-    ASSET_TO_WAREHOUSE_CATEGORY = {
-        "台式机":    "计算机设备",
-        "笔记本电脑": "计算机设备",
-        "显示器":    "显示设备",
-        "移动设备":  "移动设备",
-        "手机":      "移动设备",
-        "无线鼠标":  "输入设备",
-        "打印机":    "其他配件",
-        "网络设备":  "网络设备",
-    }
-    warehouse_category = ASSET_TO_WAREHOUSE_CATEGORY.get(category, category)
-
-    # 加行锁查询，防止并发更新
-    wh_asset = (
-        db.query(models.WarehouseAsset)
-        .filter(models.WarehouseAsset.category == warehouse_category)
-        .order_by(models.WarehouseAsset.available_quantity.desc())
-        .with_for_update()
-        .first()
-    )
-    if not wh_asset:
-        return
-    old_available = wh_asset.available_quantity
-    old_allocated = wh_asset.allocated_quantity
-    new_available = wh_asset.available_quantity + delta
-    if new_available < 0:
-        raise HTTPException(status_code=409, detail=f"库房品类「{warehouse_category}」可用库存不足，无法扣减")
-    wh_asset.available_quantity = new_available
-    wh_asset.allocated_quantity = max(0, wh_asset.total_quantity - wh_asset.available_quantity)
-    db.flush()
-    action = "入库（资产归还）" if delta > 0 else "出库（资产分配）"
-    desc = (f"资产状态联动更新: 可用数量 {old_available} → {wh_asset.available_quantity}, "
-            f"已分配 {old_allocated} → {wh_asset.allocated_quantity}")
-    wh_log = models.WarehouseAssetLog(
-        asset_id=wh_asset.id, action=action, description=desc, operator=operator_name
-    )
-    db.add(wh_log)
-    db.flush()
-
 @app.post("/api/system/backup/export")
 def export_database_backup():
     """
@@ -213,10 +162,6 @@ def create_asset(asset: schemas.AssetCreate, db: Session = Depends(get_db), curr
         operator_name = current_user.full_name or current_user.username
         create_log(db, db_asset.id, "创建资产", desc, operator=operator_name)
         create_operation_log(db, current_user.id, "create", "asset", db_asset.id, desc)
-
-        # 如果新建资产状态为"闲置"，同步增加库房可用数量
-        if asset.status == "闲置":
-            _sync_warehouse_quantity(db, db_asset.category, +1, operator_name)
 
         db.commit()
         db.refresh(db_asset)
@@ -271,57 +216,130 @@ def read_assets(
 
 
 @app.get("/assets/weekly-distribution")
-def get_weekly_distribution(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
-    """获取本周发放资产统计（上周五到本周四）"""
-    today = datetime.now()
-    weekday = today.weekday()
-    if weekday >= 4:
-        days_since_fri = weekday - 4
-    else:
-        days_since_fri = weekday + 3
-    week_start = (today - timedelta(days=days_since_fri)).replace(hour=0, minute=0, second=0, microsecond=0)
-    week_end = (week_start + timedelta(days=6)).replace(hour=23, minute=59, second=59)
-
+def get_weekly_distribution(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user),
+):
+    """统计业务周内从库房发放的固定资产和领用出库的配件。"""
+    from category_policy import PRIMARY_CATEGORY_NAMES
     from sqlalchemy import or_
-    distributed_logs = db.query(models.AssetLog).filter(
-        models.AssetLog.created_at >= week_start,
-        models.AssetLog.created_at <= week_end,
-        or_(
-            models.AssetLog.action.like('%使用中%'),
-            models.AssetLog.description.like('%状态: 使用中%')
+    import re
+
+    today = models.china_now()
+    days_since_friday = today.weekday() - 4 if today.weekday() >= 4 else today.weekday() + 3
+    week_start = (today - timedelta(days=days_since_friday)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    week_end_exclusive = week_start + timedelta(days=7)
+
+    def is_idle_to_in_use(log):
+        """只认可结构化日志中的“闲置 → 使用中”，排除新建和回收。"""
+        try:
+            old_value = json.loads(log.old_value or "{}")
+            new_value = json.loads(log.new_value or "{}")
+        except (TypeError, json.JSONDecodeError):
+            return False
+        return old_value.get("状态") == "闲置" and new_value.get("状态") == "使用中"
+
+    fixed_categories = {
+        category: {"count": 0, "items": []}
+        for category in ASSET_CATEGORY_NAMES.values()
+    }
+    fixed_logs = (
+        db.query(models.AssetLog, models.Asset)
+        .join(models.Asset, models.AssetLog.asset_id == models.Asset.id)
+        .filter(
+            models.AssetLog.created_at >= week_start,
+            models.AssetLog.created_at < week_end_exclusive,
+            models.AssetLog.action.like("状态变更:%"),
+            models.Asset.is_deleted.is_(False),
         )
-    ).all()
+        .all()
+    )
+    dispatched_assets = {}
+    for log, asset in fixed_logs:
+        if is_idle_to_in_use(log):
+            # 看板按固定资产台数统计；同一资产在统计周期内重复修改仅计一次。
+            dispatched_assets.setdefault(asset.id, asset)
 
-    asset_ids = list(set(log.asset_id for log in distributed_logs))
-    assets = db.query(models.Asset).filter(models.Asset.id.in_(asset_ids)).all() if asset_ids else []
+    for asset in dispatched_assets.values():
+        category = asset.category or "未分类"
+        fixed_categories.setdefault(category, {"count": 0, "items": []})
+        fixed_categories[category]["count"] += 1
+        fixed_categories[category]["items"].append({
+            "name": asset.hostname or asset.asset_tag,
+            "model": f"{asset.brand or ''} {asset.model or ''}".strip() or "未知型号",
+        })
 
-    categories = {}
-    all_category_names = ['台式机', '笔记本电脑', '移动设备', '手机', '无线鼠标', '显示器', '打印机', '网络设备', '其他设备']
-    for cat in all_category_names:
-        categories[cat] = {"count": 0, "items": []}
-    for asset in assets:
-        cat = asset.category or '其他设备'
-        if cat not in categories:
-            categories[cat] = {"count": 0, "items": []}
-        categories[cat]["count"] += 1
-        sub = f"{asset.brand or ''} {asset.model or ''}".strip() or "未知型号"
-        display_name = asset.hostname or asset.asset_tag
-        categories[cat]["items"].append({"name": display_name, "model": sub})
+    fixed_result = [
+        {"category": category, **data}
+        for category, data in fixed_categories.items()
+    ]
+    fixed_result.sort(key=lambda item: (-item["count"], item["category"]))
 
-    result = []
-    for cat in all_category_names:
-        data = categories.get(cat, {"count": 0, "items": []})
-        result.append({"category": cat, "count": data["count"], "items": data["items"]})
-    for cat, data in categories.items():
-        if cat not in all_category_names:
-            result.append({"category": cat, "count": data["count"], "items": data["items"]})
-    result.sort(key=lambda x: x["count"], reverse=True)
+    part_categories = {
+        category: {"quantity": 0, "items": {}}
+        for category in PRIMARY_CATEGORY_NAMES.values()
+    }
+    quantity_pattern = re.compile(r"(?:领用\s+(\d+)\s+个|出库\s+(\d+)\s+件)")
+    part_dispatch_logs = (
+        db.query(models.WarehouseAssetLog, models.WarehouseAsset)
+        .join(
+            models.WarehouseAsset,
+            models.WarehouseAssetLog.asset_id == models.WarehouseAsset.id,
+        )
+        .filter(
+            models.WarehouseAssetLog.created_at >= week_start,
+            models.WarehouseAssetLog.created_at < week_end_exclusive,
+            or_(
+                models.WarehouseAssetLog.action == "出库（分配）",
+                models.WarehouseAssetLog.action.like("配件出库（%"),
+            ),
+        )
+        .all()
+    )
+    for log, warehouse_item in part_dispatch_logs:
+        match = quantity_pattern.search(log.description or "")
+        if not match:
+            continue
+        quantity = int(match.group(1) or match.group(2))
+        if quantity <= 0:
+            continue
+
+        category = warehouse_item.category or "未分类配件"
+        category_data = part_categories.setdefault(
+            category, {"quantity": 0, "items": {}}
+        )
+        category_data["quantity"] += quantity
+        item_data = category_data["items"].setdefault(
+            warehouse_item.id,
+            {
+                "name": warehouse_item.name,
+                "model": f"{warehouse_item.brand or ''} {warehouse_item.model or ''}".strip() or "未指定型号",
+                "quantity": 0,
+            },
+        )
+        item_data["quantity"] += quantity
+
+    parts_result = []
+    for category, data in part_categories.items():
+        parts_result.append({
+            "category": category,
+            "quantity": data["quantity"],
+            "items": sorted(data["items"].values(), key=lambda item: item["name"]),
+        })
+    parts_result.sort(key=lambda item: (-item["quantity"], item["category"]))
 
     return {
         "week_start": week_start.strftime("%Y-%m-%d"),
-        "week_end": week_end.strftime("%Y-%m-%d"),
-        "total": len(assets),
-        "categories": result
+        "week_end": (week_end_exclusive - timedelta(days=1)).strftime("%Y-%m-%d"),
+        # 保留旧字段，代表本周从“闲置”发放的固定资产台数。
+        "total": len(dispatched_assets),
+        "categories": fixed_result,
+        "parts": {
+            "total_quantity": sum(item["quantity"] for item in parts_result),
+            "categories": parts_result,
+        },
     }
 
 
@@ -351,15 +369,9 @@ def get_next_asset_tag(
     根据资产品类生成下一个可用的 asset_tag。
 
     品类前缀映射：
-      台式机     → ZS-PC{YY}-NNNNNN
-      笔记本电脑  → ZS-NB{YY}-NNNNNN
-      显示器     → ZS-MR{YY}-NNNNNN
-      移动设备   → ZS-PD{YY}-NNNNNN
-      手机       → ZS-PH{YY}-NNNNNN
-      打印机     → ZS-PR{YY}-NNNNNN
-      网络设备   → ZS-NW{YY}-NNNNNN
-      无线鼠标   → ZS-MS{YY}-NNNNNN
-      其他设备   → ZS-OT{YY}-NNNNNN
+      台式机       → ZS-PC{YY}-NNNNNN
+      笔记本电脑   → ZS-NB{YY}-NNNNNN
+      平板电脑     → ZS-PD{YY}-NNNNNN
 
     YY = 当前年份后两位（如 2026 → 26）
     NNNNNN = 该前缀下最大序号 + 1，保持6位补零
@@ -369,21 +381,20 @@ def get_next_asset_tag(
     import re as _re
     from datetime import datetime as _dt
 
+    try:
+        category_code = require_fixed_asset_category(category)
+    except CategoryPolicyError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    category = ASSET_CATEGORY_NAMES[category_code]
+
     CATEGORY_PREFIX = {
-        "台式机":    "PC",
+        "台式机": "PC",
         "笔记本电脑": "NB",
-        "显示器":    "MR",
-        "移动设备":  "PD",
-        "手机":      "PH",
-        "打印机":    "PR",
-        "网络设备":  "NW",
-        "无线鼠标":  "MS",
-        "其他设备":  "OT",
-        "服务器":    "SV",
+        "平板电脑": "PD",
     }
 
-    year_suffix = str(_dt.now().year)[2:]  # "26"
-    prefix_code = CATEGORY_PREFIX.get(category, "OT")
+    year_suffix = str(_dt.now().year)[2:]
+    prefix_code = CATEGORY_PREFIX[category]
     prefix = f"ZS-{prefix_code}{year_suffix}-"  # e.g. "ZS-PC26-"
 
     # 查询该前缀下所有已存在的编号（含已删除，防止重复）
@@ -603,14 +614,6 @@ def update_asset(asset_id: int, asset: schemas.AssetUpdate, db: Session = Depend
             create_log(db, asset_id, action, description, old_json, new_json, operator=operator_name)
             create_operation_log(db, current_user.id, "update", "asset", asset_id, description, old_json, new_json)
 
-        # 状态变更时同步库房可用数量
-        # from_warehouse=True 的资产由库房模块独立管理库存数量，不参与自动同步
-        if new_status and new_status != old_status and not db_asset.from_warehouse:
-            if old_status == "闲置" and new_status != "闲置":
-                _sync_warehouse_quantity(db, db_asset.category, -1, operator_name)
-            elif new_status == "闲置" and old_status != "闲置":
-                _sync_warehouse_quantity(db, db_asset.category, +1, operator_name)
-
         db.commit()
         db.refresh(db_asset)
         return db_asset
@@ -633,8 +636,6 @@ def delete_asset(asset_id: int, deletion_request: schemas.AssetDeletionRequest, 
 
     try:
         asset_tag = db_asset.asset_tag
-        asset_status = db_asset.status
-        asset_category = db_asset.category
         asset_info = {
             "id": db_asset.id, "asset_tag": asset_tag, "category": db_asset.category,
             "brand": db_asset.brand, "model": db_asset.model, "status": db_asset.status,
@@ -653,10 +654,6 @@ def delete_asset(asset_id: int, deletion_request: schemas.AssetDeletionRequest, 
         # 软删除：标记为已删除，不物理移除
         db_asset.is_deleted = True
         db_asset.deleted_at = models.china_now()
-
-        # 如果被删除的资产是闲置状态，且不是来自库房发放，同步递减库房可用数量
-        if asset_status == "闲置" and not db_asset.from_warehouse:
-            _sync_warehouse_quantity(db, asset_category, -1, operator_name)
 
         db.commit()
         return {"message": f"资产 {asset_tag} 已删除"}
@@ -1707,10 +1704,6 @@ def update_return_record(record_id: int, record: schemas.ReturnRecordUpdate, db:
             linked_asset.supervisor = None
             linked_asset.issue_date = None
             db.flush()
-
-            # 同步库房可用数量
-            _sync_warehouse_quantity(db, linked_asset.category, +1,
-                                     current_user.full_name or current_user.username)
 
             # 记录资产操作日志
             operator_name = current_user.full_name or current_user.username

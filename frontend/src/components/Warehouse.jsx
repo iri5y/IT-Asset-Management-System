@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import {useAuth} from '../contexts/AuthContext'
+import { CONSUMABLE_CATEGORIES, CONSUMABLE_CATEGORY_COLORS } from '../constants/categories'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -113,18 +114,15 @@ function Warehouse({ selectedAsset, onAssetSelect }) {
   }, {})
 
   // 品类颜色映射
-  const categoryColors = {
-    '计算机设备': '#184e77', '显示设备': '#1e6091', '移动设备': '#1a759f', '输入设备': '#168aad',
-    '存储设备': '#34a0a4', '网络设备': '#52b69a', '其他配件': '#76c893', '未分类': '#99d98c'
-  }
+  const categoryColors = CONSUMABLE_CATEGORY_COLORS
 
   return (
     <div className="warehouse-container">
       <div className="warehouse-header">
-        <h2>IT资产库房管理</h2>
+        <h2>IT库房备品管理</h2>
         {!isReadonly && (
         <button className="btn btn-primary" onClick={handleAddAsset}>
-          + 添加库房资产
+          + 添加库房备品
         </button>
         )}
       </div>
@@ -166,11 +164,9 @@ function Warehouse({ selectedAsset, onAssetSelect }) {
         />
         <select name="category" value={filters.category} onChange={handleFilterChange}>
           <option value="">所有品类</option>
-          <option value="显示设备">显示设备</option>
-          <option value="输入设备">输入设备</option>
-          <option value="存储设备">存储设备</option>
-          <option value="网络设备">网络设备</option>
-          <option value="其他配件">其他配件</option>
+          {CONSUMABLE_CATEGORIES.map(category => (
+            <option key={category} value={category}>{category}</option>
+          ))}
         </select>
         <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <input
@@ -352,11 +348,9 @@ function WarehouseModal({ asset, onClose, onSave }) {
                 <label>品类 *</label>
                 <select name="category" value={formData.category} onChange={handleChange} required>
                   <option value="">选择品类</option>
-                  <option value="显示设备">显示设备</option>
-                  <option value="输入设备">输入设备</option>
-                  <option value="存储设备">存储设备</option>
-                  <option value="网络设备">网络设备</option>
-                  <option value="其他配件">其他配件</option>
+                  {CONSUMABLE_CATEGORIES.map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
                 </select>
               </div>
             </div>

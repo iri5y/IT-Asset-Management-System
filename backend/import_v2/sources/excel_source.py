@@ -115,17 +115,11 @@ FUZZY_ALIAS: dict[str, str] = {
 # 必填列头（模糊匹配后仍需存在这两列）
 REQUIRED_COLUMNS: frozenset[str] = frozenset({"资产编号", "状态"})
 
-# 品类关键词推断规则（文件名 → 品类），按优先级排列
+# Excel 导入只根据三类固定资产关键词推断品类。
 _FILENAME_CATEGORY_RULES: list[tuple[list[str], str]] = [
-    (["笔记本", "laptop", "notebook", "nb"],         "笔记本电脑"),
-    (["台式", "台式电脑", "desktop", "pc"],           "台式机"),
-    (["服务器", "server", "srv"],                     "服务器"),
-    (["移动设备", "pad", "ipad", "平板", "tablet"],   "平板电脑"),
-    (["手机", "phone", "mobile"],                     "手机"),
-    (["显示器", "monitor", "display"],                "显示器"),
-    (["打印机", "printer"],                           "打印机"),
-    (["网络", "network", "路由", "交换机", "switch"],  "网络设备"),
-    (["鼠标", "mouse", "键盘", "keyboard"],           "无线鼠标"),
+    (["笔记本", "laptop", "notebook", "nb"], "笔记本电脑"),
+    (["台式", "台式电脑", "desktop", "pc"], "台式机"),
+    (["移动设备", "pad", "ipad", "平板", "tablet"], "平板电脑"),
 ]
 
 # 导入模板示例行

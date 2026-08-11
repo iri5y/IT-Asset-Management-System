@@ -7,7 +7,6 @@ import json
 from typing import Any, Callable, Iterable
 
 from pydantic import ValidationError
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -18,7 +17,6 @@ from .domain_models import (
     AssetRecord,
     ImportContext,
     PolicyDecision,
-    WarningType,
 )
 from .reporting import (
     apply_execution_counts,
@@ -26,7 +24,6 @@ from .reporting import (
     build_result_issues,
     decision_counts,
     error_type_for_skip,
-    merge_warehouse_sync,
     skip_message,
     source_filenames,
     strategy_name,
@@ -38,17 +35,6 @@ from .validator import Validator
 
 _IMPORT_FIELDS = frozenset(COLUMN_MAPPING.values()) | {"additional_info"}
 _UNIQUE_NULLABLE_FIELDS = frozenset({"serial_number", "fixed_asset_number"})
-_ASSET_TO_WAREHOUSE_CATEGORY = {
-    "平板电脑": "移动设备",
-    "台式机": "计算机设备",
-    "笔记本电脑": "计算机设备",
-    "显示器": "显示设备",
-    "移动设备": "移动设备",
-    "手机": "移动设备",
-    "无线鼠标": "输入设备",
-    "打印机": "其他配件",
-    "网络设备": "网络设备",
-}
 
 
 class ImportExecutionError(RuntimeError):
@@ -397,16 +383,6 @@ class Executor:
         asset = models.Asset(**asset_data)
         context.db.add(asset)
         context.db.flush()
-        if asset.status == "闲置":
-            self._adjust_inventory(
-                context.db,
-                asset.category,
-                1,
-                context.operator_name,
-                warehouse_changes,
-                warehouse_warnings,
-                record,
-            )
         return asset
 
     def _load_duplicate_target(
@@ -433,22 +409,10 @@ class Executor:
         warehouse_warnings: list[dict[str, Any]],
     ) -> models.Asset:
         asset = self._load_duplicate_target(record, context.db)
-        old_status, old_category = asset.status, asset.category
         update_fields = (provided_fields & _IMPORT_FIELDS) - {"asset_tag"}
         for field_name in update_fields:
             setattr(asset, field_name, asset_data[field_name])
         context.db.flush()
-        self._sync_inventory_transition(
-            context.db,
-            old_status,
-            old_category,
-            asset.status,
-            asset.category,
-            context.operator_name,
-            warehouse_changes,
-            warehouse_warnings,
-            record,
-        )
         return asset
 
     def _replace(
@@ -461,126 +425,10 @@ class Executor:
     ) -> models.Asset:
         """原地完整覆盖导入字段，保留主键及现有外键关联。"""
         asset = self._load_duplicate_target(record, context.db)
-        old_status, old_category = asset.status, asset.category
         for field_name in _IMPORT_FIELDS:
             setattr(asset, field_name, asset_data.get(field_name))
         context.db.flush()
-        self._sync_inventory_transition(
-            context.db,
-            old_status,
-            old_category,
-            asset.status,
-            asset.category,
-            context.operator_name,
-            warehouse_changes,
-            warehouse_warnings,
-            record,
-        )
         return asset
-
-    def _sync_inventory_transition(
-        self,
-        db: Session,
-        old_status: str,
-        old_category: str,
-        new_status: str,
-        new_category: str,
-        operator_name: str,
-        warehouse_changes: dict[int, dict[str, Any]],
-        warehouse_warnings: list[dict[str, Any]],
-        record: AssetRecord,
-    ) -> None:
-        old_idle = old_status == "闲置"
-        new_idle = new_status == "闲置"
-        old_warehouse = self._warehouse_category(old_category)
-        new_warehouse = self._warehouse_category(new_category)
-        if old_idle and new_idle and old_warehouse == new_warehouse:
-            return
-        if old_idle:
-            self._adjust_inventory(
-                db,
-                old_category,
-                -1,
-                operator_name,
-                warehouse_changes,
-                warehouse_warnings,
-                record,
-            )
-        if new_idle:
-            self._adjust_inventory(
-                db,
-                new_category,
-                1,
-                operator_name,
-                warehouse_changes,
-                warehouse_warnings,
-                record,
-            )
-
-    @staticmethod
-    def _warehouse_category(category: str) -> str:
-        return _ASSET_TO_WAREHOUSE_CATEGORY.get(category, category)
-
-    def _adjust_inventory(
-        self,
-        db: Session,
-        category: str,
-        delta: int,
-        operator_name: str,
-        warehouse_changes: dict[int, dict[str, Any]],
-        warehouse_warnings: list[dict[str, Any]],
-        record: AssetRecord,
-    ) -> None:
-        warehouse_category = self._warehouse_category(category)
-        statement = (
-            select(models.WarehouseAsset)
-            .where(models.WarehouseAsset.category == warehouse_category)
-            .order_by(
-                models.WarehouseAsset.available_quantity.desc(),
-                models.WarehouseAsset.id.asc(),
-            )
-            .with_for_update()
-        )
-        warehouse_asset = db.execute(statement).scalars().first()
-        if warehouse_asset is None:
-            warehouse_warnings.append({
-                "row_number": record.row_number,
-                "asset_tag": record.fields.get("asset_tag"),
-                "warning_type": WarningType.WAREHOUSE_NOT_FOUND.value,
-                "message": (
-                    f"未找到品类「{warehouse_category}」的库存条目，"
-                    "资产处理继续，未同步库存"
-                ),
-            })
-            return
-
-        old_available = warehouse_asset.available_quantity or 0
-        old_allocated = warehouse_asset.allocated_quantity or 0
-        warehouse_asset.available_quantity = max(0, old_available + delta)
-        warehouse_asset.allocated_quantity = max(
-            0,
-            (warehouse_asset.total_quantity or 0)
-            - warehouse_asset.available_quantity,
-        )
-        db.flush()
-        merge_warehouse_sync(
-            warehouse_changes,
-            warehouse_asset,
-            warehouse_category,
-            old_available,
-            warehouse_asset.available_quantity,
-            old_allocated,
-            warehouse_asset.allocated_quantity,
-        )
-        db.add(models.WarehouseAssetLog(
-            asset_id=warehouse_asset.id,
-            action="批量导入库存同步",
-            description=(
-                f"可用数量 {old_available} → {warehouse_asset.available_quantity}，"
-                f"已分配 {old_allocated} → {warehouse_asset.allocated_quantity}"
-            ),
-            operator=operator_name,
-        ))
 
     @staticmethod
     def _add_asset_log(

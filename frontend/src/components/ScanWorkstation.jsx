@@ -3,6 +3,7 @@ import axios from 'axios'
 import { Scan, CheckCircle, AlertCircle, Clock, Trash2, Info, PackagePlus, ArrowLeft, X } from 'lucide-react'
 import AssetModal from './AssetModal'
 import { useAuth } from '../contexts/AuthContext'
+import { FIXED_ASSET_CATEGORIES } from '../constants/categories'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 const SCAN_BUFFER_MS = 80
@@ -199,15 +200,9 @@ function BulkInbound({ onBack }) {
             <div className="form-group">
               <label>品类 *</label>
               <select value={category} onChange={e => setCategory(e.target.value)}>
-                <option value="台式机">台式机</option>
-                <option value="笔记本电脑">笔记本电脑</option>
-                <option value="移动设备">移动设备</option>
-                <option value="手机">手机</option>
-                <option value="无线鼠标">无线鼠标</option>
-                <option value="显示器">显示器</option>
-                <option value="打印机">打印机</option>
-                <option value="网络设备">网络设备</option>
-                <option value="其他设备">其他设备</option>
+                {FIXED_ASSET_CATEGORIES.map(item => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
               </select>
             </div>
             <div className="form-group">

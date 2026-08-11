@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { FIXED_ASSET_CATEGORIES } from '../constants/categories'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -146,7 +147,7 @@ function AssetModal({ asset, onClose, onSave, scanBanner }) {
       delete finalData.tpm_status
       delete finalData.has_desktop
     }
-    const isMobileSubmit = ['移动设备', '手机'].includes(finalData.category)
+    const isMobileSubmit = finalData.category === '平板电脑'
     if (!isComputerSubmit && !isMobileSubmit) {
       delete finalData.mac_address
     }
@@ -161,7 +162,7 @@ function AssetModal({ asset, onClose, onSave, scanBanner }) {
   const isDesktop = formData.category === '台式机'
   const isLaptop = formData.category === '笔记本电脑'
   const isComputer = isDesktop || isLaptop
-  const isMobile = ['移动设备', '手机'].includes(formData.category)
+  const isMobile = formData.category === '平板电脑'
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -210,15 +211,9 @@ function AssetModal({ asset, onClose, onSave, scanBanner }) {
               ) : (
                 <select name="category" value={formData.category} onChange={handleChange} required>
                   <option value="">选择品类</option>
-                  <option value="台式机">台式机</option>
-                  <option value="笔记本电脑">笔记本电脑</option>
-                  <option value="移动设备">移动设备</option>
-                  <option value="手机">手机</option>
-                  <option value="无线鼠标">无线鼠标</option>
-                  <option value="显示器">显示器</option>
-                  <option value="打印机">打印机</option>
-                  <option value="网络设备">网络设备</option>
-                  <option value="其他设备">其他设备</option>
+                  {FIXED_ASSET_CATEGORIES.map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
                 </select>
               )}
             </div>
@@ -246,8 +241,8 @@ function AssetModal({ asset, onClose, onSave, scanBanner }) {
               </div>
             </div>
             <div className="form-group">
-              <label>序列号</label>
-              <input type="text" name="serial_number" value={formData.serial_number} onChange={handleChange} placeholder="设备序列号" style={{ textTransform: 'uppercase' }} />
+              <label>序列号 *</label>
+              <input type="text" name="serial_number" value={formData.serial_number} onChange={handleChange} placeholder="设备序列号" style={{ textTransform: 'uppercase' }} required />
             </div>
 
             {/* ===== 台式机专用 ===== */}

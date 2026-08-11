@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import axios from 'axios'
 import {useAuth} from '../contexts/AuthContext'
 import { Upload, Download, CheckSquare, Square, SlidersHorizontal, X } from 'lucide-react'
+import { FIXED_ASSET_CATEGORIES } from '../constants/categories'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -275,15 +276,9 @@ function Sidebar({ assets, selectedAsset, onSelectAsset, filters, setFilters, on
               <div style={labelStyle}>品类</div>
               <select name="category" value={filters.category} onChange={handleChange} style={selectStyle}>
                 <option value="">全部品类</option>
-                <option value="台式机">台式机</option>
-                <option value="笔记本电脑">笔记本电脑</option>
-                <option value="移动设备">移动设备</option>
-                <option value="手机">手机</option>
-                <option value="无线鼠标">无线鼠标</option>
-                <option value="显示器">显示器</option>
-                <option value="打印机">打印机</option>
-                <option value="网络设备">网络设备</option>
-                <option value="其他设备">其他设备</option>
+                {FIXED_ASSET_CATEGORIES.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
               </select>
             </div>
 

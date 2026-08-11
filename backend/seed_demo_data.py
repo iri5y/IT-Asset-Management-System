@@ -5,11 +5,11 @@
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+from category_policy import require_consumable_category
 from database import SessionLocal, engine
 import models
-from warehouse_category_seed import seed_warehouse_categories
 
 DEMO_NOTE = "[演示数据]"
 
@@ -35,7 +35,7 @@ def get_or_create_employee(db, employee_no, name, department, email, inactive=Fa
     return employee, True
 
 
-def get_or_create_warehouse(db, data, primary_code, secondary_code):
+def get_or_create_warehouse(db, data):
     existing = (
         db.query(models.WarehouseAsset)
         .filter(models.WarehouseAsset.name == data["name"])
@@ -43,27 +43,11 @@ def get_or_create_warehouse(db, data, primary_code, secondary_code):
     )
     if existing:
         return existing, False
-    primary = (
-        db.query(models.WarehousePrimaryCategory)
-        .filter(models.WarehousePrimaryCategory.code == primary_code)
-        .one()
-    )
-    secondary = (
-        db.query(models.WarehouseSecondaryCategory)
-        .filter(
-            models.WarehouseSecondaryCategory.code == secondary_code,
-            models.WarehouseSecondaryCategory.primary_category_id == primary.id,
-        )
-        .one()
-    )
-    warehouse = models.WarehouseAsset(
+    warehouse_data = {
         **data,
-        category=primary.name,
-        subcategory=secondary.name,
-        primary_category_id=primary.id,
-        secondary_category_id=secondary.id,
-        classification_status="ACTIVE",
-    )
+        "category": require_consumable_category(data["category"]),
+    }
+    warehouse = models.WarehouseAsset(**warehouse_data)
     db.add(warehouse)
     db.flush()
     db.add(models.WarehouseAssetLog(
@@ -120,10 +104,6 @@ def seed_demo_data():
     db = SessionLocal()
     counts = {"employees": 0, "assets": 0, "warehouse": 0, "returns": 0}
     try:
-        # 先确保两级仓储分类存在，后续库存记录依赖其外键。
-        seed_warehouse_categories(db)
-        db.flush()
-
         employees = {}
         employee_data = [
             ("DEMO-E001", "演示员工-张伟", "信息技术部", "demo-zhang@example.invalid", False),
@@ -136,69 +116,61 @@ def seed_demo_data():
             counts["employees"] += int(created)
 
         warehouse_data = [
-            ({
-                "name": "演示库存-笔记本电脑",
-                "brand": "Lenovo",
-                "model": "ThinkPad E14",
+            {
+                "name": "演示库存-有线鼠标",
+                "category": "输入设备",
+                "subcategory": "有线鼠标",
+                "brand": "通用",
+                "model": "USB",
                 "total_quantity": 12,
                 "available_quantity": 8,
                 "allocated_quantity": 4,
                 "minimum_stock": 3,
-                "low_stock_threshold": 2,
                 "location": "IT库房",
                 "notes": DEMO_NOTE,
-                "issue_policy": "RETURNABLE",
-                "material_kind": "FIXED_ASSET_TERMINAL",
-            }, "TERMINAL_EQUIPMENT", "TERMINAL_LAPTOP"),
-            ({
+            },
+            {
                 "name": "演示库存-显示器",
+                "category": "显示设备",
+                "subcategory": "显示器",
                 "brand": "Dell",
                 "model": "P2422H",
                 "total_quantity": 10,
                 "available_quantity": 3,
                 "allocated_quantity": 7,
                 "minimum_stock": 5,
-                "low_stock_threshold": 2,
                 "location": "A区货架",
                 "notes": DEMO_NOTE,
-                "issue_policy": "RETURNABLE",
-                "material_kind": "LOW_VALUE_RETURNABLE",
-            }, "DISPLAY_AUDIO_VIDEO", "DISPLAY_MONITOR"),
-            ({
+            },
+            {
                 "name": "演示库存-网线",
+                "category": "线缆与连接配件",
+                "subcategory": "网线",
                 "brand": "通用",
                 "model": "CAT6",
                 "total_quantity": 100,
                 "available_quantity": 76,
                 "allocated_quantity": 24,
                 "minimum_stock": 20,
-                "low_stock_threshold": 10,
                 "location": "B区货架",
                 "notes": DEMO_NOTE,
-                "issue_policy": "CONSUMABLE",
-                "material_kind": "CONSUMABLE",
-            }, "CABLES_CONNECTORS", "CABLE_NETWORK"),
-            ({
+            },
+            {
                 "name": "演示库存-工具箱",
+                "category": "工具",
+                "subcategory": "工具箱",
                 "brand": "得力",
                 "model": "工具套装",
                 "total_quantity": 6,
                 "available_quantity": 2,
                 "allocated_quantity": 4,
                 "minimum_stock": 2,
-                "low_stock_threshold": 1,
                 "location": "临时存放区",
                 "notes": DEMO_NOTE,
-                "issue_policy": "RETURNABLE",
-                "material_kind": "LOANABLE_TOOL",
-            }, "IT_TOOLS_LOAN_ITEMS", "TOOL_KIT"),
+            },
         ]
-        warehouses = {}
-        for data, primary_code, secondary_code in warehouse_data:
-            warehouse, created = get_or_create_warehouse(
-                db, data, primary_code, secondary_code
-            )
-            warehouses[data["name"]] = warehouse
+        for data in warehouse_data:
+            _, created = get_or_create_warehouse(db, data)
             counts["warehouse"] += int(created)
 
         asset_data = [
@@ -236,11 +208,11 @@ def seed_demo_data():
                 "quantity": 1,
             },
             {
-                "asset_tag": "ZS-MR26-900003",
-                "category": "显示器",
-                "brand": "Dell",
-                "model": "P2422H",
-                "serial_number": "DEMO-SN-MR-900003",
+                "asset_tag": "ZS-PD26-900003",
+                "category": "平板电脑",
+                "brand": "Samsung",
+                "model": "Galaxy Tab",
+                "serial_number": "DEMO-SN-PD-900003",
                 "status": "闲置",
                 "location": "IT库房",
                 "notes": DEMO_NOTE,

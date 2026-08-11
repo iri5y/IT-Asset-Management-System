@@ -2,6 +2,14 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 from datetime import datetime
 from typing import ClassVar, Literal, Optional, List, Set
 
+from category_policy import (
+    ASSET_CATEGORY_NAMES,
+    CategoryPolicyError,
+    normalize_asset_category,
+    require_consumable_category,
+    require_fixed_asset_category,
+)
+
 # ========== 用户认证 Schemas ==========
 
 class UserBase(BaseModel):
@@ -119,21 +127,23 @@ class AssetBase(BaseModel):
     # 扩展字段：存储 Excel 中未映射到固定列的额外数据
     additional_info: Optional[dict] = None
 
-    # 标记该资产是否由库房发放创建（归还时不触发库房数量自动同步）
+    # 历史兼容字段；固定资产与库房消耗品已分域，不参与库存联动
     from_warehouse: Optional[bool] = False
 
 class AssetCreate(AssetBase):
-    # 需要 SN 的品类列表（笔记本、台式机、服务器等主要设备）
-    SN_REQUIRED_CATEGORIES: ClassVar[Set[str]] = {"笔记本电脑", "台式机", "服务器", "移动设备"}
-    # PO号必填的品类
-    PO_REQUIRED_CATEGORIES: ClassVar[Set[str]] = {"笔记本电脑", "台式机"}
+    SN_REQUIRED_CATEGORIES: ClassVar[Set[str]] = {"台式机", "笔记本电脑", "平板电脑"}
+    PO_REQUIRED_CATEGORIES: ClassVar[Set[str]] = {"台式机", "笔记本电脑"}
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def validate_fixed_asset_category(cls, value):
+        normalized = normalize_asset_category(str(value))
+        code = require_fixed_asset_category(normalized)
+        return ASSET_CATEGORY_NAMES[code]
 
     @model_validator(mode="after")
     def validate_serial_number_by_category(self):
-        """根据品类决定字段必填规则：
-        - 笔记本电脑、台式机、服务器、移动设备：SN 必填
-        - 笔记本电脑、台式机：PO号必填，且必须为纯数字
-        """
+        """三类固定资产都要求SN；台式机和笔记本电脑还要求数字PO号。"""
         # 1. 序列号必填校验
         if self.category in self.SN_REQUIRED_CATEGORIES:
             if not self.serial_number or not self.serial_number.strip():
@@ -186,6 +196,15 @@ class AssetUpdate(BaseModel):
 
     # 扩展字段
     additional_info: Optional[dict] = None
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def validate_fixed_asset_category(cls, value):
+        if value is None:
+            return None
+        normalized = normalize_asset_category(str(value))
+        code = require_fixed_asset_category(normalized)
+        return ASSET_CATEGORY_NAMES[code]
 
 class Asset(AssetBase):
     id: int
@@ -244,7 +263,10 @@ class WarehouseAssetBase(BaseModel):
     notes: Optional[str] = None
 
 class WarehouseAssetCreate(WarehouseAssetBase):
-    pass
+    @field_validator("category", mode="before")
+    @classmethod
+    def validate_consumable_category(cls, value):
+        return require_consumable_category(str(value))
 
 class WarehouseAssetUpdate(BaseModel):
     name: Optional[str] = None
@@ -260,6 +282,13 @@ class WarehouseAssetUpdate(BaseModel):
     location: Optional[str] = None
     notes: Optional[str] = None
     dispatch_note: Optional[str] = None  # 消耗品分配备注，用于操作日志描述，不存入资产字段
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def validate_consumable_category(cls, value):
+        if value is None:
+            return None
+        return require_consumable_category(str(value))
 
 class WarehouseAsset(WarehouseAssetBase):
     id: int
