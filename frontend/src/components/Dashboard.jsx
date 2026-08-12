@@ -187,9 +187,9 @@ function Dashboard({ assets, onGlobalSearch }) {
             </div>
           </div>
           <div className="chart-card">
-            <h3>部门分布 (Top 15) </h3>
+            <h3>部门分布 (Top 10) </h3>
             <div style={{ padding: '10px 0' }}>
-              {Object.entries(stats.departmentCount).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([department, count]) => (
+              {Object.entries(stats.departmentCount).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([department, count]) => (
                 <StatusBar key={department} label={department} value={count} total={stats.total} color="#168aad" />
               ))}
               {Object.keys(stats.departmentCount).length === 0 && (
